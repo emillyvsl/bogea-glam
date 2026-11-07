@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: bogea-glam-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: bogea_glam
+      POSTGRES_USER: bogea
+      POSTGRES_PASSWORD: bogea_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - bogea_glam_data:/var/lib/postgresql/data
+
+volumes:
+  bogea_glam_data:

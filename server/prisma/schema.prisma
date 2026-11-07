@@ -1,0 +1,151 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "postgresql"
+  url = env("DATABASE_URL")
+}
+model Category {
+  id Int @id @default(autoincrement())
+  name String @unique
+  services Service[]
+  @@map("categories")
+}
+model Service {
+  id Int @id @default(autoincrement())
+  name String
+  category String
+  categoryRecord Category @relation(fields: [category], references: [name], onUpdate: Cascade, onDelete: Restrict)
+  description String
+  duration Int
+  price Decimal @db.Decimal(10, 2)
+  active Boolean @default(true)
+  image String @default("")
+  @@map("services")
+}
+model Professional {
+  id Int @id @default(autoincrement())
+  name String
+  email String @unique
+  active Boolean @default(true)
+  bookings Booking[]
+  serviceIds Int[] @default([]) @map("service_ids")
+  allServices Boolean @default(true) @map("all_services")
+  hours Json?
+  userId Int? @unique @map("user_id")
+  user User? @relation(fields: [userId], references: [id])
+  @@map("professionals")
+}
+model Booking {
+  id Int @id @default(autoincrement())
+  protocol String? @unique
+  clientName String @map("client_name")
+  whatsapp String
+  professionalId Int? @map("professional_id")
+  professional Professional? @relation(fields: [professionalId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  serviceIds Int[] @map("service_ids")
+  bookingDate DateTime @db.Date @map("booking_date")
+  startMinute Int @map("start_minute")
+  endMinute Int @map("end_minute")
+  totalMinutes Int @map("total_minutes")
+  totalPrice Decimal @db.Decimal(10, 2) @map("total_price")
+  deposit Decimal @db.Decimal(10, 2)
+  status String @default("Aguardando pagamento")
+  expiresAt DateTime? @db.Timestamptz(6) @map("expires_at")
+  createdAt DateTime @default(now()) @db.Timestamptz(6) @map("created_at")
+  segments Json @default("[]")
+  whatsappConsent Boolean @default(false) @map("whatsapp_consent")
+  paid Boolean @default(false)
+  customerId Int? @map("customer_id")
+  customer User? @relation(fields: [customerId], references: [id])
+  serviceNames String[] @default([]) @map("service_names")
+  payments Payment[]
+  notifications Notification[]
+  @@index([professionalId, bookingDate], map: "bookings_calendar")
+  @@map("bookings")
+}
+model User {
+  id Int @id @default(autoincrement())
+  email String @unique
+  passwordHash String @map("password_hash")
+  name String
+  role String @default("MANAGER")
+  active Boolean @default(true)
+  sessions Session[]
+  professional Professional?
+  bookings Booking[]
+  @@map("users")
+}
+model Salon {
+  id Int @id @default(1)
+  name String @default("Bogéa Glam")
+  address String @default("")
+  whatsapp String @default("")
+  hours Json
+  reminderHours Int @default(24) @map("reminder_hours")
+  @@map("salon")
+}
+model Block {
+  id Int @id @default(autoincrement())
+  date DateTime @db.Date
+  endDate DateTime @db.Date @map("end_date")
+  start Int
+  end Int
+  professionalId Int? @map("professional_id")
+  reason String
+  @@index([date, endDate])
+  @@map("blocks")
+}
+model Payment {
+  id String @id @default(uuid())
+  bookingId Int @map("booking_id")
+  booking Booking @relation(fields: [bookingId], references: [id])
+  amount Int
+  checkoutUrl String? @map("checkout_url")
+  checkoutRequest Json? @map("checkout_request")
+  transactionId String? @unique @map("transaction_id")
+  status String @default("Pendente")
+  reason String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  @@map("payments")
+}
+model Notification {
+  id Int @id @default(autoincrement())
+  bookingId Int @map("booking_id")
+  booking Booking @relation(fields: [bookingId], references: [id])
+  kind String
+  phone String
+  body String
+  scheduledAt DateTime @map("scheduled_at") @db.Timestamptz(6)
+  status String @default("Na fila")
+  sid String?
+  error String?
+  claimedAt DateTime? @map("claimed_at") @db.Timestamptz(6)
+  @@unique([bookingId, kind])
+  @@map("notifications")
+}
+model Session {
+  tokenHash String @id @map("token_hash")
+  userId Int @map("user_id")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime @db.Timestamptz(6) @map("expires_at")
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+
+model PaymentEvent {
+  id String @id @default(uuid())
+  key String @unique
+  orderId String @map("order_id")
+  transactionId String? @map("transaction_id")
+  slug String?
+  event String
+  status String @default("Pendente")
+  attempts Int @default(0)
+  nextAttemptAt DateTime @default(now()) @map("next_attempt_at") @db.Timestamptz(6)
+  error String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  @@index([status, nextAttemptAt])
+  @@map("payment_events")
+}

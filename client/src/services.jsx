@@ -1,0 +1,34 @@
+﻿import React,{useEffect,useRef,useState} from 'react';
+import { ImagePlus,Pencil,Power,Trash2 } from 'lucide-react';
+import { api,money } from './api';
+import {showError} from './alerts';
+import { ListHeader,EditorHeader,StatusBadge } from './crud';
+const durationLabel=value=>`${Math.floor(value/60)}h${value%60?String(value%60).padStart(2,'0'):''}`;
+const blank=()=>({name:'',category:'',description:'',image:'',duration:'',price:'',active:true});
+export default function Services({services,categories=[],save}) {
+  const [form,setForm]=useState(null),[search,setSearch]=useState(''),[filter,setFilter]=useState(''),[file,setFile]=useState(null),[preview,setPreview]=useState(''),[error,setError]=useState(''),[working,setWorking]=useState(false);
+  const fileInput=useRef(null);
+  useEffect(()=>{if(!file){setPreview('');return;}const url=URL.createObjectURL(file);setPreview(url);return()=>URL.revokeObjectURL(url);},[file]);
+  const edit=service=>{setForm(service?{...service,price:String(service.price),duration:String(service.duration)}:blank());setFile(null);setError('');};
+  const back=()=>{setForm(null);setFile(null);setError('');};
+  const chooseFile=event=>{
+    const chosen=event.target.files?.[0];if(!chosen)return;
+    if(!['image/jpeg','image/png','image/webp'].includes(chosen.type)||chosen.size>5*1024*1024){setError('Escolha uma imagem JPG, PNG ou WebP de até 5 MB.');showError('Escolha uma imagem JPG, PNG ou WebP de até 5 MB.');event.target.value='';return;}
+    setFile(chosen);setError('');
+  };
+  const submit=async event=>{
+    event.preventDefault();setWorking(true);setError('');
+    try{
+      let image=form.image;
+      if(file){const uploaded=await api('/admin/images',{method:'POST',headers:{'Content-Type':file.type},body:file});image=uploaded.url;setForm(current=>({...current,image}));setFile(null);}
+      if(await save('/admin/services',{...form,image,duration:Number(form.duration),price:Number(form.price)}))back();
+    }catch(err){setError(err.message);showError(err.message);}finally{setWorking(false);}
+  };
+  const durationOptions=[...new Set([...Array.from({length:40},(_,i)=>(i+1)*15),...(form?.duration?[Number(form.duration)]:[])])].sort((a,b)=>a-b);
+  if(form)return <section className="crud-editor"><EditorHeader title={form.id?'Editar serviço':'Novo serviço'} onBack={back} disabled={working}/><form className="editor service-editor" onSubmit={submit}><fieldset className="service-edit-fields" disabled={working}><div className="service-details-fields"><label>Nome do serviço<input required maxLength={120} value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/></label><label>Categoria<select aria-label="Categoria" required value={form.category} onChange={e=>setForm({...form,category:e.target.value})}><option value="">Selecione uma categoria</option>{categories.map(c=><option key={c.id} value={c.name}>{c.name}</option>)}</select><small>Cadastre as opções no menu Categorias.</small></label><label>Descrição<textarea rows={5} maxLength={1500} value={form.description} onChange={e=>setForm({...form,description:e.target.value})}/></label><div className="form-grid"><label>Duração do serviço (horas)<select required value={form.duration} onChange={e=>setForm({...form,duration:e.target.value})}><option value="">Selecione a duração</option>{durationOptions.map(value=><option key={value} value={value}>{durationLabel(value)}</option>)}</select></label><label>Preço (R$)<input type="number" required min="0" step="0.01" value={form.price} onChange={e=>setForm({...form,price:e.target.value})}/></label></div><label className="check-label"><input type="checkbox" checked={form.active} onChange={e=>setForm({...form,active:e.target.checked})}/>Serviço ativo no catálogo</label></div><section className="service-image-editor"><h3>Imagem do serviço</h3><div className="upload-preview">{preview||form.image?<img src={preview||form.image} alt="Prévia da imagem do serviço"/>:<div><ImagePlus size={38} strokeWidth={1}/><p>Adicione uma imagem para o catálogo</p></div>}</div><label className="upload-file-label">{form.image||file?'Trocar imagem':'Escolher imagem'}<input ref={fileInput} type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseFile}/></label><small>JPG, PNG ou WebP · até 5 MB.<br/>A nova imagem será enviada quando você salvar.</small>{file&&<p className="upload-filename">{file.name}</p>}{(form.image||file)&&<button className="remove-image" type="button" onClick={()=>{setFile(null);setForm({...form,image:''});if(fileInput.current)fileInput.current.value='';}}><Trash2 size={14}/>Remover imagem</button>}<details className="image-url-option"><summary>Usar endereço de imagem</summary><label>URL HTTPS ou caminho local<input value={form.image} onChange={e=>{setFile(null);setForm({...form,image:e.target.value});if(fileInput.current)fileInput.current.value='';}} placeholder="https://… ou /images/arquivo.jpg"/></label></details></section></fieldset>{error&&<p className="notice" role="alert">{error}</p>}<div className="crud-form-actions"><button className="outline-button" type="button" disabled={working} onClick={back}>Cancelar</button><button className="gold-button" disabled={working}>{working?'Salvando…':'Salvar serviço'}</button></div></form></section>;
+  const rows=services.filter(s=>`${s.name} ${s.category}`.toLowerCase().includes(search.toLowerCase())&&(filter===''||s.active===(filter==='active')));
+  return <section className="crud-list"><ListHeader title="Serviços" count={services.length} onNew={()=>edit(null)} newLabel="Novo serviço" search={search} onSearch={setSearch}/><div className="crud-filters"><label>Situação<select value={filter} onChange={e=>setFilter(e.target.value)}><option value="">Todos os serviços</option><option value="active">Ativos</option><option value="inactive">Inativos</option></select></label><span>{rows.length} registro(s)</span></div><div className="crud-table-scroll"><table className="crud-table"><thead><tr><th>Serviço</th><th>Duração</th><th>Preço</th><th>Situação</th><th>Ações</th></tr></thead><tbody>{rows.map(s=><tr key={s.id}><td><div className="crud-service-name">{s.image?<img src={s.image} alt=""/>:<span className="crud-image-placeholder"><ImagePlus size={22}/></span>}<div><strong>{s.name}</strong><small>{s.category||'Sem categoria'}</small></div></div></td><td>{durationLabel(s.duration)}</td><td>{money(s.price)}</td><td><StatusBadge active={s.active}/></td><td><div className="crud-row-actions"><button aria-label={`Editar ${s.name}`} onClick={()=>edit(s)}><Pencil size={15}/>Editar</button><button aria-label={`${s.active?'Desativar':'Ativar'} ${s.name}`} onClick={()=>save(`/admin/services/${s.id}/active`,{active:!s.active},'PATCH')}><Power size={15}/>{s.active?'Desativar':'Ativar'}</button></div></td></tr>)}</tbody></table></div>{!rows.length&&<p className="crud-empty">Nenhum serviço encontrado.</p>}</section>;
+}
+
+
+

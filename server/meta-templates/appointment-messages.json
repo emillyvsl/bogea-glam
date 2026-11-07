@@ -1,0 +1,62 @@
+[
+  {
+    "name": "bogea_confirmacao_protocolo",
+    "language": "pt_BR",
+    "category": "UTILITY",
+    "components": [
+      {
+        "type": "BODY",
+        "text": "Olá, {{1}}! 💜 Seu agendamento no Bogéa Glam foi confirmado.\nServiço: {{2}}\nData: {{3}}\nHorário: {{4}}\nProtocolo: {{5}}\nConsulte a situação no nosso site, em Consultar agendamento.\nAguardamos você!",
+        "example": {
+          "body_text": [
+            [
+              "Maria",
+              "Escova",
+              "13/11/2026",
+              "09:00",
+              "BG-0123456789ABCDEF01234567"
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "name": "bogea_lembrete_24h",
+    "language": "pt_BR",
+    "category": "UTILITY",
+    "components": [
+      {
+        "type": "BODY",
+        "text": "Olá, {{1}}! Passando para lembrar que você tem um agendamento no Bogéa Glam amanhã, às {{2}}.",
+        "example": {
+          "body_text": [
+            [
+              "Maria",
+              "09:00"
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "name": "bogea_lembrete_2h",
+    "language": "pt_BR",
+    "category": "UTILITY",
+    "components": [
+      {
+        "type": "BODY",
+        "text": "Olá, {{1}}! Seu atendimento no Bogéa Glam começa em 2 horas, às {{2}}. Esperamos você!",
+        "example": {
+          "body_text": [
+            [
+              "Maria",
+              "09:00"
+            ]
+          ]
+        }
+      }
+    ]
+  }
+]

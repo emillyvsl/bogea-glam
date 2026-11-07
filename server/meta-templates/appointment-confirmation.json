@@ -1,0 +1,16 @@
+{
+  "name": "bogea_agendamento_confirmado",
+  "language": "pt_BR",
+  "category": "UTILITY",
+  "components": [
+    { "type": "HEADER", "format": "TEXT", "text": "Agendamento confirmado" },
+    {
+      "type": "BODY",
+      "text": "Olá, {{1}}! Seu agendamento no Bogéa Glam está confirmado.\n\nServiço: {{2}}\nProfissional: {{3}}\nData: {{4}}\nHorário: {{5}}\n\nSinal: {{6}}\nRestante no salão: {{7}}\n\nConfira os dados e guarde esta confirmação. Até o seu atendimento!",
+      "example": {
+        "body_text": [["Maria", "Escova", "Emilly", "10/11/2026", "09:00 às 10:00", "R$ 36,00 recebido", "R$ 84,00"]]
+      }
+    },
+    { "type": "FOOTER", "text": "Bogéa Glam • Rio Branco, AC" }
+  ]
+}

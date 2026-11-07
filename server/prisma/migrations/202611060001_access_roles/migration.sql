@@ -1,0 +1,2 @@
+UPDATE "users" SET "role" = 'MANAGER' WHERE "role" = 'ADMIN';
+ALTER TABLE "users" ALTER COLUMN "role" SET DEFAULT 'MANAGER';

@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS services (id SERIAL PRIMARY KEY, name TEXT NOT NULL, category TEXT NOT NULL, description TEXT NOT NULL, duration INTEGER NOT NULL, price NUMERIC(10,2) NOT NULL, active BOOLEAN NOT NULL DEFAULT TRUE);
+    CREATE TABLE IF NOT EXISTS professionals (id SERIAL PRIMARY KEY, name TEXT NOT NULL, email TEXT UNIQUE NOT NULL, active BOOLEAN NOT NULL DEFAULT TRUE);
+    CREATE TABLE IF NOT EXISTS bookings (id SERIAL PRIMARY KEY, client_name TEXT NOT NULL, whatsapp TEXT NOT NULL, professional_id INTEGER REFERENCES professionals(id), service_ids INTEGER[] NOT NULL, booking_date DATE NOT NULL, start_minute INTEGER NOT NULL, end_minute INTEGER NOT NULL, total_minutes INTEGER NOT NULL, total_price NUMERIC(10,2) NOT NULL, deposit NUMERIC(10,2) NOT NULL, status TEXT NOT NULL DEFAULT 'Aguardando pagamento', expires_at TIMESTAMPTZ NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
+    ALTER TABLE bookings ADD COLUMN IF NOT EXISTS segments JSONB NOT NULL DEFAULT '[]';
+    ALTER TABLE bookings ADD COLUMN IF NOT EXISTS whatsapp_consent BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE bookings ADD COLUMN IF NOT EXISTS paid BOOLEAN NOT NULL DEFAULT FALSE;
+    CREATE INDEX IF NOT EXISTS bookings_calendar ON bookings (professional_id, booking_date);
+  

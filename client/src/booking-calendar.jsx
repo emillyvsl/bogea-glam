@@ -1,0 +1,21 @@
+import React,{useEffect,useState} from 'react';
+import {ChevronLeft,ChevronRight,RefreshCw} from 'lucide-react';
+import {api,today,dateLabel} from './api';
+export default function BookingCalendar({professionalId,serviceId,selected,onChoose,onMonthChange=()=>{}}) {
+  const [month,setMonth]=useState((selected||today()).slice(0,7)),[days,setDays]=useState([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[refresh,setRefresh]=useState(0);
+  useEffect(()=>{const focus=()=>setRefresh(v=>v+1);window.addEventListener('focus',focus);return()=>window.removeEventListener('focus',focus);},[]);
+  useEffect(()=>{
+    const controller=new AbortController();setLoading(true);setError('');setDays([]);
+    api(`/availability/dates?month=${month}&professionalId=${professionalId}&serviceIds=${serviceId}`,{signal:controller.signal}).then(data=>setDays(data.days)).catch(e=>{if(e.name!=='AbortError')setError(e.message);}).finally(()=>{if(!controller.signal.aborted)setLoading(false);});
+    return()=>controller.abort();
+  },[month,professionalId,serviceId,refresh]);
+  const first=new Date(`${month}-01T12:00:00Z`),offset=(first.getUTCDay()+6)%7;
+  const selectMonth=value=>{if(!/^\d{4}-\d{2}$/.test(value)||value<today().slice(0,7)||value.slice(5)<'01'||value.slice(5)>'12')return;if(value!==month){setMonth(value);onMonthChange(value);}};
+  const changeMonth=amount=>{const next=new Date(first);next.setUTCMonth(next.getUTCMonth()+amount);selectMonth(next.toISOString().slice(0,7));};
+  const label=new Intl.DateTimeFormat('pt-BR',{month:'long',year:'numeric',timeZone:'UTC'}).format(first);
+  const available=days.filter(d=>d.available).length;
+  return <section className="booking-calendar" aria-label="Calendário de datas disponíveis"><header><div><h4>{label}</h4><span>Disponibilidade para o serviço escolhido</span></div><div className="booking-calendar-controls"><button className="icon-button" disabled={month<=today().slice(0,7)} aria-label="Mês anterior" onClick={()=>changeMonth(-1)}><ChevronLeft size={20}/></button><button className="today-button" onClick={()=>{selectMonth(today().slice(0,7));setRefresh(v=>v+1);}}>Hoje</button><button className="icon-button" aria-label="Próximo mês" onClick={()=>changeMonth(1)}><ChevronRight size={20}/></button></div></header><label className="booking-month-picker">Ir para mês<input type="month" aria-label="Escolher mês do agendamento" min={today().slice(0,7)} value={month} onChange={e=>selectMonth(e.target.value)}/></label><div className="booking-month-grid" aria-busy={loading}>{['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'].map(d=><span className="booking-weekday" key={d}>{d}</span>)}{Array.from({length:offset},(_,i)=><span key={`empty-${i}`}/>)}{Array.from({length:new Date(first.getUTCFullYear(),first.getUTCMonth()+1,0).getDate()},(_,i)=>{
+    const date=`${month}-${String(i+1).padStart(2,'0')}`,isAvailable=!loading&&!error&&days.some(d=>d.date===date&&d.available),isToday=date===today();
+    return <button key={date} className={`${isAvailable?'available':'unavailable'} ${selected===date?'selected':''} ${isToday?'is-today':''}`} disabled={!isAvailable} aria-label={`${dateLabel(date)} · ${isAvailable?'Disponível':'Indisponível'}`} aria-pressed={selected===date} onClick={()=>onChoose(date)}><strong>{i+1}</strong><span aria-hidden="true">{isAvailable?'●':'—'}</span></button>;
+  })}</div><div className="booking-calendar-legend"><span><i/>Disponível</span><span><i/>Indisponível ou dia fechado</span></div><div className="booking-calendar-status" role="status">{loading?'Consultando dias disponíveis…':error?<><p>{error}</p><button className="outline-button" onClick={()=>setRefresh(v=>v+1)}>Tentar novamente</button></>:available?`${available} dia${available===1?'':'s'} com horários. Selecione um dia em destaque.`:'Não há dias com horários disponíveis neste mês. Consulte o próximo mês.'}</div><button className="calendar-refresh" disabled={loading} onClick={()=>setRefresh(v=>v+1)}><RefreshCw size={13}/>Atualizar disponibilidade</button><small className="calendar-reservation-note">Os horários são conferidos novamente antes de concluir a reserva.</small></section>;
+}
