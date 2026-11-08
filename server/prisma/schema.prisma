@@ -66,6 +66,7 @@ model Booking {
   payments Payment[]
   notifications Notification[]
   googleSync GoogleCalendarSync?
+  confirmationEmail BookingEmail?
   @@index([professionalId, bookingDate], map: "bookings_calendar")
   @@map("bookings")
 }
@@ -202,4 +203,23 @@ model GoogleCalendarOAuthState {
   expiresAt DateTime @db.Timestamptz(6)
   @@index([expiresAt])
   @@map("google_calendar_oauth_states")
+}
+
+model BookingEmail {
+  id String @id @default(uuid())
+  bookingId Int @unique
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  payload Json
+  status String @default("PENDING")
+  attempts Int @default(0)
+  nextAttemptAt DateTime @default(now()) @db.Timestamptz(6)
+  firstAttemptAt DateTime? @db.Timestamptz(6)
+  lease String?
+  claimedAt DateTime? @db.Timestamptz(6)
+  providerId String?
+  lastError String?
+  sentAt DateTime? @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  @@index([status, nextAttemptAt])
+  @@map("booking_emails")
 }

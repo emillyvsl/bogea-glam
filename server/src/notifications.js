@@ -1,5 +1,6 @@
 ﻿import {ensureProtocol} from './protocol.js';
 import { prisma } from './db.js';
+import {queueBookingEmail,scheduleBookingEmails} from './booking-email.js';
 import { getSalon, dateString, phone } from './salon.js';
 import { minutesToTime,localNow } from './scheduling.js';
 import {metaConfigured,sendMetaTemplate,appointmentComponents} from './meta-whatsapp.js';
@@ -8,6 +9,7 @@ export const notificationsConfigured = () => whatsappProvider()==='meta' ? metaC
 export async function queueConfirmation(db, booking, remindersOnly=false) {
   if(booking.status!=='Confirmado')return;
   booking.protocol=await ensureProtocol(db,booking);
+  if(!remindersOnly)await queueBookingEmail(db,booking);
   if (!notificationsConfigured() || !booking.whatsappConsent) return;
   const salon = await getSalon(db);
   const start = new Date(`${dateString(booking.bookingDate)}T${minutesToTime(booking.startMinute)}:00-05:00`);
@@ -22,6 +24,7 @@ export async function queueConfirmation(db, booking, remindersOnly=false) {
 }
 let dispatching=false;
 export function scheduleNotificationDispatch(){
+  scheduleBookingEmails();
   if(dispatching||!notificationsConfigured())return;
   dispatching=true;
   setImmediate(async()=>{

@@ -1,5 +1,6 @@
 import {processGoogleCalendar} from './google-calendar-worker.js';
 import {googleConfigured} from './google-calendar.js';
+import {scheduleBookingEmails} from './booking-email.js';
 import {reconcilePaymentEvents} from './payment-events.js';
 import 'dotenv/config';
 import { app } from './app.js';
@@ -28,3 +29,4 @@ const paymentTimer=setInterval(()=>reconcilePaymentEvents().catch(()=>console.er
 let googleRunning=false;
 async function syncGoogle(){if(googleRunning||!googleConfigured())return;googleRunning=true;try{await processGoogleCalendar();}catch{console.error('Falha na fila Google Agenda. Nova tentativa programada.');}finally{googleRunning=false;}}
 const googleTimer=setInterval(syncGoogle,30000);googleTimer.unref();
+const emailTimer=setInterval(scheduleBookingEmails,30000);emailTimer.unref();

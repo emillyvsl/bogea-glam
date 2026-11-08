@@ -36,7 +36,7 @@ try {
   const preserved = await database.query('SELECT description FROM services WHERE id = 1');
   assert.equal(preserved.rows[0].description, 'preservar registro');
   const migrations = await database.query('SELECT count(*)::int AS count FROM _prisma_migrations WHERE finished_at IS NOT NULL');
-  assert.equal(migrations.rows[0].count, 11);
+  assert.equal(migrations.rows[0].count, 12);
   run('node_modules/prisma/build/index.js', 'migrate', 'diff', '--from-schema-datasource', 'prisma/schema.prisma', '--to-schema-datamodel', 'prisma/schema.prisma', '--exit-code');
   process.env.DATABASE_URL = url.toString();
   const {prisma}=await import('../src/db.js');
@@ -51,6 +51,7 @@ try {
   await database.query("INSERT INTO professionals (name,email) VALUES ('Profissional de teste','principal@example.test'),('Outra profissional de teste','outra@example.test')");
   const previousGoogle=process.env.GOOGLE_CALENDAR_ENABLED;
   process.env.GOOGLE_CALENDAR_ENABLED='true';
+  process.env.EMAIL_ENABLED='false';
   await checkWorkflow(env);
   const confirmedBookings=await prisma.booking.findMany({where:{status:'Confirmado'},include:{googleSync:true}});
   assert.ok(confirmedBookings.length>0);
@@ -58,6 +59,8 @@ try {
   if(previousGoogle===undefined)delete process.env.GOOGLE_CALENDAR_ENABLED;else process.env.GOOGLE_CALENDAR_ENABLED=previousGoogle;
   const {checkGoogleCalendar}=await import('./check-google-calendar.js');
   await checkGoogleCalendar(prisma);
+  const {checkBookingEmail}=await import('./check-booking-email.js');
+  await checkBookingEmail(prisma);
   await prisma.$disconnect();
   console.log('OK: banco novo, seed repetido e adoção do banco legado preservando dados.');
 } catch (error) { console.error(error.message); process.exitCode = 1; }
