@@ -11,9 +11,11 @@
     "db:migrate": "npm --prefix server run db:migrate --",
     "db:deploy": "npm --prefix server run db:deploy",
     "db:seed": "npm --prefix server run db:seed",
+    "db:seed:services": "npm --prefix server run db:seed:services",
     "db:studio": "npm --prefix server run db:studio"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
   }
 }
+

@@ -12,17 +12,19 @@ const CATEGORY_LABEL = {
 export default function CatalogServices({ services, professionals=[], selected, onToggle, onContinue }) {
   const [query, setQuery] = useState(()=>new URLSearchParams(window.location.search).get('busca')||'');
   const [category, setCategory] = useState('all');
+  const [showAddons,setShowAddons]=useState(false);
 
   // Categorias derivadas dos serviços reais
   const categories = useMemo(() => {
-    const set = new Set(services.map(s => s.category).filter(Boolean));
+    const set = new Set(services.filter(s=>!isAddon(s)).map(s => s.category).filter(Boolean));
     return ['all', ...set];
   }, [services]);
 
   const filtered = useMemo(() => {
     const q = normalize(query.trim());
     return services.filter(s => {
-      const matchQuery = !q || normalize(s.name).includes(q);
+      if(isAddon(s))return false;
+      const matchQuery = !q || normalize(s.name+' '+s.category).includes(q);
       const matchCat = category === 'all' || s.category === category;
       return matchQuery && matchCat;
     });
@@ -30,10 +32,13 @@ export default function CatalogServices({ services, professionals=[], selected, 
 
   // Totais
   const chosen = services.filter(s => selected.includes(s.id));
+  const mainService=chosen.find(s=>!isAddon(s));
+  const addons=services.filter(isAddon);
   const total = chosen.reduce((sum, s) => sum + Number(s.price), 0);
   const totalMinutes = chosen.reduce((sum, s) => sum + (Number(s.duration) || 0), 0);
   const deposit = Math.round(total * 0.3 * 100) / 100;
 
+  if(showAddons&&mainService)return <section className="service-list-step addons-step"><button type="button" className="back-button" onClick={()=>setShowAddons(false)}>← Voltar aos serviços</button><header className="service-list-head"><h1>Quer complementar seu atendimento?</h1><p className="service-list-sub">Serviço escolhido: <strong>{mainService.name}</strong>. Os adicionais são opcionais.</p></header><section className="service-addons"><h3>Complementos opcionais</h3>{addons.map(addon=>{const checked=selected.includes(addon.id),compatible=professionals.some(p=>p.active!==false&&(p.allServices||chosen.filter(s=>s.id!==addon.id).every(s=>p.serviceIds?.includes(s.id))&&p.serviceIds?.includes(addon.id)));return <label key={addon.id}><input type="checkbox" checked={checked} disabled={!compatible&&!checked} onChange={()=>onToggle(addon.id)}/><span><strong>{addon.name}</strong><small>{formatMinutes(addon.duration)} · {money(Number(addon.price))}{!compatible?' · Sem profissional compatível':''}</small></span></label>;})}</section><div className="addons-total"><strong>Total {money(total)}</strong><span>Sinal de 30%: {money(deposit)} · Duração: {formatMinutes(totalMinutes)}</span></div><button type="button" className="gold-button" disabled={!professionals.some(p=>p.active!==false&&(p.allServices||chosen.every(s=>p.serviceIds?.includes(s.id))))} onClick={onContinue}>{chosen.length>1?'Continuar com os complementos':'Continuar sem adicionais'} →</button></section>;
   return (
     <section className="service-list-step" aria-labelledby="svc-title">
       <header className="service-list-head">
@@ -81,24 +86,13 @@ export default function CatalogServices({ services, professionals=[], selected, 
           {filtered.map(s => {
             const isSelected = selected.includes(s.id);
             const staff=professionals.filter(p=>p.active!==false&&(p.allServices||p.serviceIds?.includes(s.id)));
-            return (
+  return (
               <article
                 key={s.id}
                 className={`service-card ${isSelected ? 'is-selected' : ''}`}
               >
-                <div className="service-card-media">
-                  {s.image
-                    ? <img src={s.image} alt="" loading="lazy" />
-                    : <div className="service-card-placeholder" aria-hidden="true" />}
-                  {isSelected && (
-                    <span className="service-card-check" aria-hidden="true">
-                      <Check size={16} strokeWidth={3} />
-                    </span>
-                  )}
-                </div>
-
                 <div className="service-card-body">
-                  <h3>{s.name}</h3>
+                  <div className="service-card-title"><h3>{s.name}</h3>{isSelected&&<Check size={18} aria-label="Serviço selecionado"/>}</div>
                   {s.description && (
                     <p className="service-card-desc">{s.description}</p>
                   )}
@@ -133,18 +127,19 @@ export default function CatalogServices({ services, professionals=[], selected, 
       )}
 
       {chosen.length>0&&!professionals.some(p=>p.active!==false&&(p.allServices||chosen.every(s=>p.serviceIds?.includes(s.id))))&&<p className="notice" role="alert">Nenhum profissional está disponível para este serviço. Escolha outro para continuar.</p>}
+
       {/* Barra fixa de resumo + continuar */}
       {chosen.length > 0 && (
         <div className="service-summary-bar" role="region" aria-label="Resumo do pedido">
           <div className="service-summary-info">
             <strong>
-              {chosen.length} {chosen.length === 1 ? 'serviço' : 'serviços'}
+              1 serviço{chosen.length>1? +  adicional(is):''}
             </strong>
             <span>
               Total {money(total)} · Sinal {money(deposit)} · ~{formatMinutes(totalMinutes)}
             </span>
           </div>
-          <button type="button" className="gold-button" disabled={!professionals.some(p=>p.active!==false&&(p.allServices||chosen.every(s=>p.serviceIds?.includes(s.id))))} onClick={onContinue}>
+          <button type="button" className="gold-button" disabled={!professionals.some(p=>p.active!==false&&(p.allServices||chosen.every(s=>p.serviceIds?.includes(s.id))))} onClick={()=>addons.length?setShowAddons(true):onContinue()}>
             Continuar →
           </button>
         </div>
@@ -163,6 +158,12 @@ function formatMinutes(min) {
 const normalize=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 
 
+
+
+
+
+
+const isAddon=service=>String(service.category||'').trim().toUpperCase()==='ADICIONAIS';
 
 
 

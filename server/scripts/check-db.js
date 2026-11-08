@@ -22,7 +22,7 @@ try {
   run('prisma/seed.js');
   run('prisma/seed.js');
   const counts = await database.query('SELECT (SELECT count(*)::int FROM services) AS services, (SELECT count(*)::int FROM professionals) AS professionals, (SELECT count(*)::int FROM users) AS users');
-  assert.deepEqual(counts.rows[0], { services: 4, professionals: 0, users: 1 });
+  assert.deepEqual(counts.rows[0], { services: 30, professionals: 0, users: 1 });
   const { rows: [user] } = await database.query('SELECT password_hash FROM users');
   assert.notEqual(user.password_hash, env.ADMIN_PASSWORD);
   // Reproduce the pre-Prisma schema inside this isolated test database.
@@ -39,6 +39,14 @@ try {
   assert.equal(migrations.rows[0].count, 9);
   run('node_modules/prisma/build/index.js', 'migrate', 'diff', '--from-schema-datasource', 'prisma/schema.prisma', '--to-schema-datamodel', 'prisma/schema.prisma', '--exit-code');
   process.env.DATABASE_URL = url.toString();
+  const {prisma}=await import('../src/db.js');
+  const {replaceSalonCatalog}=await import('../prisma/salon-catalog.js');
+  const firstCatalog=await prisma.$transaction(replaceSalonCatalog,{timeout:60000});
+  const secondCatalog=await prisma.$transaction(replaceSalonCatalog,{timeout:60000});
+  assert.equal(firstCatalog.active,30);assert.equal(secondCatalog.active,30);
+  assert.equal(await prisma.service.count({where:{active:true}}),30);
+  const makeup=await prisma.service.findFirst({where:{category:'MAQUIAGEM',name:'Maquiagem express'}});assert.equal(makeup.duration,40);assert.equal(Number(makeup.price),170);
+  await prisma.service.create({data:{name:'Escova',category:'ESCOVA',description:'Fixture de teste',duration:60,price:120,active:true}});
   const { checkWorkflow } = await import('./check-workflow.js');
   await database.query("INSERT INTO professionals (name,email) VALUES ('Profissional de teste','principal@example.test'),('Outra profissional de teste','outra@example.test')");
   await checkWorkflow(env);
@@ -49,6 +57,8 @@ finally {
   if (created) await admin.query(`DROP DATABASE "${name}"`);
   await admin.end();
 }
+
+
 
 
 

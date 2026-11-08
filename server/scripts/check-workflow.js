@@ -226,6 +226,18 @@ export async function checkWorkflow(env) {
     assert.equal(linkCalls,callsAfterRecovery,'Não recuperar cobrança depois de expirar');
     assert.equal((await request('/bookings',uncertainBody,customer.cookie)).status,201,'A reserva expirada precisa liberar o horário');
     linkMode='ok';
+    const cancelSlots=await request(`/availability?date=${date}&professionalId=${professional.id}&serviceIds=${service.id}`);
+    if(cancelSlots.data.slots.length){
+      const startMinute=cancelSlots.data.slots[0].start;
+      const cancelReservation=await request('/bookings',{...body,startMinute},customer.cookie);assert.equal(cancelReservation.status,201);
+      const cancelId=cancelReservation.data.bookingId;
+      assert.equal((await request(`/bookings/${cancelId}/cancel`,{},admin.cookie)).status,404);
+      assert.equal((await request(`/bookings/${cancelId}/cancel`,{},customer.cookie)).status,200);
+      assert.equal((await request(`/bookings/${cancelId}/cancel`,{},customer.cookie)).status,200);
+      assert.equal((await prisma.booking.findUnique({where:{id:cancelId}})).status,'Cancelado');
+      assert.equal((await request('/payments/checkout',{bookingId:cancelId},customer.cookie)).status,409);
+      assert.ok((await request(`/availability?date=${date}&professionalId=${professional.id}&serviceIds=${service.id}`)).data.slots.some(s=>s.start===startMinute));
+    }
     assert.equal((await request(`/admin/professionals/${professional.id}/active`,{active:false},admin.cookie,'PATCH')).status,200);
     assert.equal((await request('/bookings',null,staff.cookie)).status,401);
     console.log('OK: login de cliente/equipe, isolamento, consentimento opcional, conflitos simultâneos, bloqueios, agendamento manual e validação de pagamentos (provedor simulado).');
@@ -237,6 +249,7 @@ export async function checkWorkflow(env) {
     for(const filename of uploadedFiles)await unlink(path.join(imageDirectory,filename));
   }
 }
+
 
 
 

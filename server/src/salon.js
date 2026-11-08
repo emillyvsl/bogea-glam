@@ -34,6 +34,7 @@ export async function bookingContext(db, date, professionalId, serviceIds, range
     db.block.findMany({ where: { date: { lte: lastDate }, endDate: { gte: bookingDate }, OR: [{ professionalId: null }, { professionalId }] } })
   ]);
   if (!professional?.active || services.length !== serviceIds.length || services.some(s => !Number.isInteger(s.duration) || s.duration < 15 || s.duration > 600) || (!professional.allServices && serviceIds.some(id => !professional.serviceIds.includes(id)))) fail('O profissional não realiza todos os serviços selecionados.');
+  if(services.every(s=>s.category.trim().toUpperCase()==='ADICIONAIS'))fail('Adicionais precisam acompanhar um serviço principal.');
   const duration = services.reduce((sum,s) => sum + s.duration,0);
   const totalCents = services.reduce((sum,s) => sum + Math.round(Number(s.price) * 100),0);
   return { salon, professional, services, bookings, blocks, duration, totalCents, bookingDate };
@@ -67,4 +68,5 @@ export function presentBooking(b, employee = false) {
   const result = { id: b.id, protocol:b.protocol, client_name: b.clientName, whatsapp: b.whatsapp, booking_date: dateString(b.bookingDate), professional_id: b.professionalId, professional_name: b.professional?.name, services: b.serviceNames, start: minutesToTime(b.startMinute), end: minutesToTime(b.endMinute), start_minute: b.startMinute, end_minute: b.endMinute, segments: b.segments, status, expires_at: b.expiresAt, whatsapp_consent: b.whatsappConsent };
   return employee ? result : { ...result, total_price: Number(b.totalPrice), deposit: Number(b.deposit), paid: b.paid };
 }
+
 

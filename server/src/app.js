@@ -96,6 +96,18 @@ app.get('/api/bookings/:id',requireBookingUser,async(req,res)=>{
   const id=Number(req.params.id);if(!Number.isInteger(id)||id<1)fail('Reserva inválida.');
   res.json(await reservationSnapshot(id,req.user));
 });
+app.post('/api/bookings/:id/cancel',requireBookingUser,async(req,res)=>{
+ const id=Number(req.params.id);if(!Number.isInteger(id)||id<1)fail('Reserva inválida.');
+ await locked(async tx=>{
+   const booking=await tx.booking.findUnique({where:{id}});
+   if(!booking||booking.customerId!==req.user.id)fail('Reserva não encontrada.',404);
+   if(booking.status==='Cancelado')return;
+   if(booking.status!=='Aguardando pagamento'||booking.paid)fail('Esta reserva já não pode ser cancelada nesta tela. Entre em contato com o salão.',409);
+   if(await tx.payment.count({where:{bookingId:id,status:{in:['Aprovado','Em análise']}}}))fail('Há um pagamento registrado. Entre em contato com o salão.',409);
+   await tx.booking.update({where:{id},data:{status:'Cancelado',expiresAt:null}});
+   await tx.notification.updateMany({where:{bookingId:id,status:'Na fila'},data:{status:'Cancelada'}});
+ });res.json({ok:true,status:'Cancelado'});
+});
 app.patch('/api/bookings/:id/status', requireStaff, async (req,res) => {
   const id = Number(req.params.id); if (!Number.isInteger(id)) fail('Atendimento inválido.');
   const employee = req.user.role === 'EMPLOYEE';
@@ -239,6 +251,7 @@ app.use((error,_req,res,_next) => {
   if (status === 500) console.error(error.message);
   res.status(status).json({ error: status === 413 ? 'A imagem excede o limite de 5 MB.' : status === 500 ? 'Não foi possível concluir a operação.' : error.code === 'P2002' ? 'Registro já cadastrado.' : error.code === 'P2025' ? 'Registro não encontrado.' : error.message });
 });
+
 
 
 
