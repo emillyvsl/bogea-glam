@@ -1,4 +1,5 @@
-﻿import React, { useMemo, useState } from 'react';
+﻿import {canComplement} from './service-complements';
+import React, { useMemo, useState } from 'react';
 import { Search, Check, Plus, Clock3, X } from 'lucide-react';
 import { money } from './api';
 
@@ -32,13 +33,13 @@ export default function CatalogServices({ services, professionals=[], selected, 
 
   // Totais
   const chosen = services.filter(s => selected.includes(s.id));
-  const mainService=chosen.find(s=>!isAddon(s));
-  const addons=services.filter(isAddon);
+  const mainService=services.find(s=>s.id===selected[0]);
+  const addons=services.filter(s=>canComplement(mainService,s));
   const total = chosen.reduce((sum, s) => sum + Number(s.price), 0);
   const totalMinutes = chosen.reduce((sum, s) => sum + (Number(s.duration) || 0), 0);
   const deposit = Math.round(total * 0.3 * 100) / 100;
 
-  if(showAddons&&mainService)return <section className="service-list-step addons-step"><button type="button" className="back-button" onClick={()=>setShowAddons(false)}>← Voltar aos serviços</button><header className="service-list-head"><h1>Quer complementar seu atendimento?</h1><p className="service-list-sub">Serviço escolhido: <strong>{mainService.name}</strong>. Os adicionais são opcionais.</p></header><section className="service-addons"><h3>Complementos opcionais</h3>{addons.map(addon=>{const checked=selected.includes(addon.id),compatible=professionals.some(p=>p.active!==false&&(p.allServices||chosen.filter(s=>s.id!==addon.id).every(s=>p.serviceIds?.includes(s.id))&&p.serviceIds?.includes(addon.id)));return <label key={addon.id}><input type="checkbox" checked={checked} disabled={!compatible&&!checked} onChange={()=>onToggle(addon.id)}/><span><strong>{addon.name}</strong><small>{formatMinutes(addon.duration)} · {money(Number(addon.price))}{!compatible?' · Sem profissional compatível':''}</small></span></label>;})}</section><div className="addons-total"><strong>Total {money(total)}</strong><span>Sinal de 30%: {money(deposit)} · Duração: {formatMinutes(totalMinutes)}</span></div><button type="button" className="gold-button" disabled={!professionals.some(p=>p.active!==false&&(p.allServices||chosen.every(s=>p.serviceIds?.includes(s.id))))} onClick={onContinue}>{chosen.length>1?'Continuar com os complementos':'Continuar sem adicionais'} →</button></section>;
+  if(showAddons&&mainService)return <section className="service-list-step addons-step"><button type="button" className="back-button" onClick={()=>setShowAddons(false)}>← Voltar aos serviços</button><header className="service-list-head"><h1>{String(mainService.category).toUpperCase()==='ESCOVA'?'Quer finalizar sua escova?':'Quer adicionar penteado, babyliss ou prender no grampo?'}</h1><p className="service-list-sub">Serviço escolhido: <strong>{mainService.name}</strong>. Os adicionais são opcionais.</p></header><section className="service-addons"><h3>Complementos opcionais</h3>{addons.map(addon=>{const checked=selected.includes(addon.id),compatible=professionals.some(p=>p.active!==false&&(p.allServices||chosen.filter(s=>s.id!==addon.id).every(s=>p.serviceIds?.includes(s.id))&&p.serviceIds?.includes(addon.id)));return <label key={addon.id}><input type="checkbox" checked={checked} disabled={!compatible&&!checked} onChange={()=>onToggle(addon.id,true)}/><span><strong>{isAddon(addon)&&/babyliss|baby.?lis/i.test(addon.name)?'Finalização com babyliss':addon.name}</strong><small>{formatMinutes(addon.duration)} · {money(Number(addon.price))}{!compatible?' · Sem profissional compatível':''}</small></span></label>;})}</section><div className="addons-total"><strong>Total {money(total)}</strong><span>Sinal de 30%: {money(deposit)} · Duração: {formatMinutes(totalMinutes)}</span></div><button type="button" className="gold-button" disabled={!professionals.some(p=>p.active!==false&&(p.allServices||chosen.every(s=>p.serviceIds?.includes(s.id))))} onClick={onContinue}>{chosen.length>1?'Continuar com os complementos':'Continuar sem adicionais'} →</button></section>;
   return (
     <section className="service-list-step" aria-labelledby="svc-title">
       <header className="service-list-head">
@@ -164,6 +165,8 @@ const normalize=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036
 
 
 const isAddon=service=>String(service.category||'').trim().toUpperCase()==='ADICIONAIS';
+
+
 
 
 

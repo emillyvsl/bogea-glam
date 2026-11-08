@@ -34,6 +34,7 @@ model Professional {
   hours Json?
   userId Int? @unique @map("user_id")
   user User? @relation(fields: [userId], references: [id])
+  googleConnections GoogleCalendarConnection[]
   @@map("professionals")
 }
 model Booking {
@@ -41,6 +42,9 @@ model Booking {
   protocol String? @unique
   clientName String @map("client_name")
   whatsapp String
+  clientEmail String? @map("client_email")
+  termsAcceptedAt DateTime? @db.Timestamptz(6) @map("terms_accepted_at")
+  termsVersion String? @map("terms_version")
   professionalId Int? @map("professional_id")
   professional Professional? @relation(fields: [professionalId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   serviceIds Int[] @map("service_ids")
@@ -61,6 +65,7 @@ model Booking {
   serviceNames String[] @default([]) @map("service_names")
   payments Payment[]
   notifications Notification[]
+  googleSync GoogleCalendarSync?
   @@index([professionalId, bookingDate], map: "bookings_calendar")
   @@map("bookings")
 }
@@ -148,4 +153,53 @@ model PaymentEvent {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   @@index([status, nextAttemptAt])
   @@map("payment_events")
+}
+
+model GoogleCalendarConnection {
+  id String @id @default(uuid())
+  professionalId Int
+  professional Professional @relation(fields: [professionalId], references: [id], onDelete: Restrict)
+  googleAccountEmail String
+  calendarId String @default("primary")
+  refreshTokenEncrypted String? @db.Text
+  status String @default("CONNECTED")
+  connectedAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  syncs GoogleCalendarSync[]
+  @@index([professionalId, status])
+  @@map("google_calendar_connections")
+}
+
+model GoogleCalendarSync {
+  id String @id @default(uuid())
+  bookingId Int @unique
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  connectionId String?
+  connection GoogleCalendarConnection? @relation(fields: [connectionId], references: [id], onDelete: Restrict)
+  calendarId String?
+  googleEventId String?
+  generation Int @default(0)
+  fingerprint String?
+  status String @default("PENDING")
+  revision Int @default(1)
+  attempts Int @default(0)
+  nextAttemptAt DateTime @default(now()) @db.Timestamptz(6)
+  lease String?
+  claimedAt DateTime? @db.Timestamptz(6)
+  lastError String? @db.Text
+  syncedAt DateTime? @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  @@index([status, nextAttemptAt])
+  @@map("google_calendar_syncs")
+}
+
+model GoogleCalendarOAuthState {
+  hash String @id
+  userId Int
+  professionalId Int
+  sessionHash String
+  expiresAt DateTime @db.Timestamptz(6)
+  @@index([expiresAt])
+  @@map("google_calendar_oauth_states")
 }

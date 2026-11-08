@@ -1,4 +1,7 @@
-﻿import { prisma } from './db.js';
+import {queueGoogleCalendar} from './google-calendar.js';
+import {queueConfirmation} from './notifications.js';
+import {validateComplements} from './service-complements.js';
+import { prisma } from './db.js';
 import { salonHours, planAppointment, validDate, minutesToTime } from './scheduling.js';
 export const fail = (message, status = 400) => { const error = new Error(message); error.status = status; throw error; };
 export const asDate = value => { if (!validDate(value)) fail('Data inválida.'); return new Date(`${value}T00:00:00Z`); };
@@ -34,7 +37,7 @@ export async function bookingContext(db, date, professionalId, serviceIds, range
     db.block.findMany({ where: { date: { lte: lastDate }, endDate: { gte: bookingDate }, OR: [{ professionalId: null }, { professionalId }] } })
   ]);
   if (!professional?.active || services.length !== serviceIds.length || services.some(s => !Number.isInteger(s.duration) || s.duration < 15 || s.duration > 600) || (!professional.allServices && serviceIds.some(id => !professional.serviceIds.includes(id)))) fail('O profissional não realiza todos os serviços selecionados.');
-  if(services.every(s=>s.category.trim().toUpperCase()==='ADICIONAIS'))fail('Adicionais precisam acompanhar um serviço principal.');
+  try{validateComplements(services,serviceIds);}catch(error){fail(error.message);}
   const duration = services.reduce((sum,s) => sum + s.duration,0);
   const totalCents = services.reduce((sum,s) => sum + Math.round(Number(s.price) * 100),0);
   return { salon, professional, services, bookings, blocks, duration, totalCents, bookingDate };
@@ -45,28 +48,34 @@ export function availablePlan(ctx, date, start, excludeId = null, now = new Date
   return plan;
 }
 export async function createBooking(body, user, manual = false) {
+  if(!manual&&(body.termsAccepted!==true||body.termsVersion!=='2026-11-08'))fail('Leia e aceite a versão atual dos Termos de Uso para reservar.');
   const { date, professionalId, serviceIds, startMinute } = body;
   const clientName = cleanText(body.clientName,120), whatsapp = phone(body.whatsapp);
+  const clientEmail=cleanText(body.clientEmail,254).toLowerCase();
+  if(clientEmail&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clientEmail))fail('Informe um e-mail válido ou deixe o campo vazio.');
   if (clientName.length < 2 || !/^\d{10,13}$/.test(whatsapp)) fail('Informe nome e WhatsApp com DDD.');
   if (!manual && user.role === 'EMPLOYEE') fail('Funcionários não criam reservas.',403);
   return locked(async tx => {
     const ctx = await bookingContext(tx,date,professionalId,serviceIds);
     const plan = availablePlan(ctx,date,startMinute);
     if (!plan) fail('Este horário não está disponível. Atualize a consulta.',409);
-    return tx.booking.create({ data: {
-      clientName, whatsapp, customerId: manual ? null : user.id, professionalId, serviceIds,
+    const booking=await tx.booking.create({ data: {
+      clientName, whatsapp, clientEmail:clientEmail||null, termsAcceptedAt:manual?null:new Date(),termsVersion:manual?null:'2026-11-08', customerId: manual ? null : user.id, professionalId, serviceIds,
       serviceNames: ctx.services.map(s => s.name), bookingDate: ctx.bookingDate,
       startMinute, endMinute: plan.end, segments: plan.segments, totalMinutes: ctx.duration,
       totalPrice: ctx.totalCents / 100, deposit: Math.round(ctx.totalCents * .3) / 100,
       status: manual ? 'Confirmado' : 'Aguardando pagamento', expiresAt: manual ? null : new Date(Date.now() + 600000),
       whatsappConsent: body.whatsappConsent === true, paid: manual && body.depositReceived === true
     } });
+    if(manual){await queueConfirmation(tx,booking);await queueGoogleCalendar(tx,booking);}
+    return booking;
   });
 }
 export function presentBooking(b, employee = false) {
   const status = b.status === 'Aguardando pagamento' && (!b.expiresAt || b.expiresAt <= new Date()) ? 'Expirado' : b.status;
-  const result = { id: b.id, protocol:b.protocol, client_name: b.clientName, whatsapp: b.whatsapp, booking_date: dateString(b.bookingDate), professional_id: b.professionalId, professional_name: b.professional?.name, services: b.serviceNames, start: minutesToTime(b.startMinute), end: minutesToTime(b.endMinute), start_minute: b.startMinute, end_minute: b.endMinute, segments: b.segments, status, expires_at: b.expiresAt, whatsapp_consent: b.whatsappConsent };
+  const result = { id: b.id, protocol:b.protocol, client_name: b.clientName, client_email:b.clientEmail, whatsapp: b.whatsapp, booking_date: dateString(b.bookingDate), professional_id: b.professionalId, professional_name: b.professional?.name, services: b.serviceNames, start: minutesToTime(b.startMinute), end: minutesToTime(b.endMinute), start_minute: b.startMinute, end_minute: b.endMinute, segments: b.segments, status, expires_at: b.expiresAt, whatsapp_consent: b.whatsappConsent };
   return employee ? result : { ...result, total_price: Number(b.totalPrice), deposit: Number(b.deposit), paid: b.paid };
 }
+
 
 

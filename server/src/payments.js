@@ -1,6 +1,7 @@
-﻿import {paymentUrls} from './config.js';
+import {paymentUrls} from './config.js';
 import { prisma } from './db.js';
 import { locked, fail, bookingContext, availablePlan, dateString } from './salon.js';
+import {queueGoogleCalendar} from './google-calendar.js';
 import { queueConfirmation,scheduleNotificationDispatch } from './notifications.js';
 export const paymentsConfigured = () => !!process.env.INFINITEPAY_HANDLE && !!process.env.INFINITEPAY_API_KEY;
 export const webhookEnabled = () => (process.env.INFINITEPAY_WEBHOOK_PUBLIC ?? process.env.INFINITEPAY_WEBHOOK_ENABLED) === 'true';
@@ -83,6 +84,7 @@ export async function verifyPayment(input, user = null) {
     if (!reason) {
       const confirmed = await tx.booking.update({ where: { id: booking.id }, data: { status: 'Confirmado', paid: true, expiresAt: null } });
       await queueConfirmation(tx,confirmed);
+      await queueGoogleCalendar(tx,confirmed);
     }
     return { confirmed: !reason, status: reason ? 'Em análise' : 'Confirmado', reason,protocol:reason?null:(await tx.booking.findUnique({where:{id:booking.id},select:{protocol:true}})).protocol };
   });

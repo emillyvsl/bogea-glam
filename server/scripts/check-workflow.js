@@ -77,12 +77,15 @@ export async function checkWorkflow(env) {
     const register=await request('/auth/register',{name:'Cliente Teste',email:'customer@example.com',password:'customer-test-password'});assert.equal(register.status,201);
     const customer=await request('/auth/login',{email:'customer@example.com',password:'customer-test-password'});assert.equal(customer.status,200);
     let next=new Date(Date.now()+14*86400000);while(next.getUTCDay()!==2)next=new Date(next.getTime()+86400000);const date=next.toISOString().slice(0,10);
-    const body={clientName:'Cliente Teste',whatsapp:'68999999999',professionalId:professional.id,serviceIds:[service.id],date,startMinute:540,whatsappConsent:false};
+    const body={termsAccepted:true,termsVersion:'2026-11-08',clientName:'Cliente Teste',whatsapp:'68999999999',professionalId:professional.id,serviceIds:[service.id],date,startMinute:540,whatsappConsent:false};
     assert.equal((await request('/bookings',body)).status,401);
     assert.equal((await request('/bookings',body,staff.cookie)).status,403);
+    assert.equal((await request('/bookings',{...body,termsAccepted:false},customer.cookie)).status,400);
+    assert.equal((await request('/bookings',{...body,termsVersion:'old'},customer.cookie)).status,400);
     const attempts=await Promise.all([request('/bookings',body,customer.cookie),request('/bookings',body,customer.cookie)]);
     assert.deepEqual(attempts.map(a=>a.status).sort(),[201,409]);
     const id=attempts.find(a=>a.status===201).data.bookingId;
+    const acceptedTerms=await prisma.booking.findUnique({where:{id}});assert.equal(acceptedTerms.termsVersion,'2026-11-08');assert.ok(acceptedTerms.termsAcceptedAt instanceof Date);
     const blockedLunch=await request(`/availability?date=${date}&professionalId=${professional.id}&serviceIds=${service.id}`);
     assert.equal(blockedLunch.data.slots.some(s=>s.start===720),false);
     assert.equal(blockedLunch.data.slots.some(s=>s.start===540),false);

@@ -1,4 +1,6 @@
-﻿import {reconcilePaymentEvents} from './payment-events.js';
+import {processGoogleCalendar} from './google-calendar-worker.js';
+import {googleConfigured} from './google-calendar.js';
+import {reconcilePaymentEvents} from './payment-events.js';
 import 'dotenv/config';
 import { app } from './app.js';
 import { prisma } from './db.js';
@@ -22,3 +24,7 @@ if (notificationsConfigured() || process.env.REMINDERS_ENABLED === 'true') {
 
 const paymentTimer=setInterval(()=>reconcilePaymentEvents().catch(()=>console.error('Falha na conciliação de pagamentos.')),60000);paymentTimer.unref();
 
+
+let googleRunning=false;
+async function syncGoogle(){if(googleRunning||!googleConfigured())return;googleRunning=true;try{await processGoogleCalendar();}catch{console.error('Falha na fila Google Agenda. Nova tentativa programada.');}finally{googleRunning=false;}}
+const googleTimer=setInterval(syncGoogle,30000);googleTimer.unref();

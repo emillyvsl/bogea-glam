@@ -1,4 +1,6 @@
-﻿import {registerPaymentEvents} from './payment-events.js';
+import {registerGoogleCalendar} from './google-calendar-routes.js';
+import {queueGoogleCalendar} from './google-calendar.js';
+import {registerPaymentEvents} from './payment-events.js';
 import {frontendOrigin} from './config.js';
 import express from 'express';
 import cors from 'cors';
@@ -22,6 +24,7 @@ for (const method of ['get','post','patch','put','delete']) {
   app[method] = (path,...handlers) => register(path,...handlers.map(handler => handler.constructor.name === 'AsyncFunction' ? (req,res,next) => Promise.resolve(handler(req,res,next)).catch(next) : handler));
 }
 registerAuth(app);
+registerGoogleCalendar(app);
 registerUploads(app);
 app.get('/api/health', async (_req,res) => { await prisma.$queryRaw`SELECT 1`; res.json({ ok: true }); });
 const protocolAttempts=new Map();
@@ -124,6 +127,7 @@ app.patch('/api/bookings/:id/status', requireStaff, async (req,res) => {
     }
     const result = await tx.booking.update({ where: { id }, data: { status: req.body.status, paid: b.paid || (isRoot(req.user) && req.body.depositReceived === true), ...(req.body.status === 'Confirmado' ? { expiresAt: null } : {}) } });
     if (result.status === 'Confirmado') await queueConfirmation(tx,result);
+    await queueGoogleCalendar(tx,result);
     if (result.status === 'Cancelado') await tx.notification.updateMany({ where: { bookingId: id, status: 'Na fila' }, data: { status: 'Cancelada' } });
     return result;
   });
