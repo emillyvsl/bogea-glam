@@ -11,8 +11,9 @@ export default function PublicNavigation(){
     for(const id of ['trabalhos','sobre']){const section=document.getElementById(id);if(section)observer.observe(section);}
     return()=>{window.removeEventListener('hashchange',update);observer.disconnect();};
   },[services,consulting]);
-  return <nav aria-label="Navegação principal">{[['portfolio','Portfólio','/#trabalhos'],['agenda','Agendar','/servicos#booking'],['sobre','Sobre','/#sobre'],['consultar','Consultar','/consultar']].map(([key,label,href])=><a key={key} href={href} className={active===key?'portfolio-active':''} aria-current={active===key?((key==='agenda'||key==='consultar')?'page':'location'):undefined} onClick={()=>{if(!services&&key!=='agenda')setActive(key);}}>{label}</a>)}</nav>;
+  return <nav aria-label="Navegação principal">{[['portfolio','Portfólio','/#trabalhos'],['sobre','Sobre','/#sobre'],['agenda','Agendar','/servicos#booking'],['consultar','Consultar','/consultar']].map(([key,label,href])=><a key={key} href={href} className={active===key?'portfolio-active':''} aria-current={active===key?((key==='agenda'||key==='consultar')?'page':'location'):undefined} onClick={()=>{if(!services&&key!=='agenda')setActive(key);}}>{label}</a>)}</nav>;
 }
+
 
 
 

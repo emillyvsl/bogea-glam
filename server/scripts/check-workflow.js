@@ -38,7 +38,16 @@ export async function checkWorkflow(env) {
     let ws=(await request('/admin/workspace',null,admin.cookie)).data;
     const professional=ws.professionals[0], service=ws.services.find(s=>s.name==='Escova');
     const team=await request('/admin/professionals',{...professional,password:'staff-test-password',hours:null,serviceIds:[service.id],allServices:false},admin.cookie);assert.equal(team.status,200,JSON.stringify(team.data));
+    const guest=await request('/auth/guest',{name:'Visitante completo',whatsapp:'(68) 99999-9999'});assert.equal(guest.status,200);assert.equal(guest.data.user.role,'CLIENT');
+    assert.equal((await request('/auth/booking-session',null,guest.cookie)).status,200);
+    assert.equal((await request('/admin/workspace',null,guest.cookie)).status,401);
+    assert.equal((await request('/auth/guest',{name:'A',whatsapp:'123'})).status,400);
     const staff=await request('/auth/login',{email:professional.email,password:'staff-test-password'});assert.equal(staff.status,200);
+    const roleProfessional=await request('/admin/professionals',{name:'Gestor teste',email:'gestor-role@example.test',password:'manager-test-password',active:true,allServices:true,serviceIds:[],hours:null,role:'MANAGER'},admin.cookie);assert.equal(roleProfessional.status,200);
+    const managerLogin=await request('/auth/login',{email:'gestor-role@example.test',password:'manager-test-password'});assert.equal(managerLogin.data.user.role,'MANAGER');
+    assert.equal((await request('/admin/professionals',{name:'Escalada',email:'blocked-root@example.test',password:'manager-test-password',active:true,allServices:true,serviceIds:[],hours:null,role:'ROOT'},managerLogin.cookie)).status,403);
+    assert.equal((await request('/admin/professionals',{...roleProfessional.data,role:'EMPLOYEE'},admin.cookie)).status,200);
+    assert.equal((await request('/admin/workspace',null,managerLogin.cookie)).status,401);
     assert.equal((await request('/admin/workspace',null,staff.cookie)).status,403);
     const picture=await readFile('../client/public/images/escova.jpg');
     const upload=async(bytes,cookie,type='image/jpeg')=>fetch(`${base}/admin/images`,{method:'POST',headers:{'Content-Type':type,...(cookie?{Cookie:cookie}:{})},body:bytes});
@@ -228,6 +237,8 @@ export async function checkWorkflow(env) {
     for(const filename of uploadedFiles)await unlink(path.join(imageDirectory,filename));
   }
 }
+
+
 
 
 

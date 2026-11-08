@@ -1,0 +1,8 @@
+﻿import React from 'react';
+import {ShieldCheck,CalendarDays,Users,Settings,ArrowLeft} from 'lucide-react';
+import Brand from './brand';
+import Account from './account';
+export default function ManagerLogin({onLogin,notice}){
+ return <div className="manager-login admin-access"><aside className="admin-access-brand"><Brand/><div className="admin-access-story"><p className="eyebrow">BOGÉA GLAM · GERENCIADOR</p><h1>O controle do salão.<br/><span>Em um só lugar.</span></h1><p>Acesse as ferramentas de gestão da sua equipe e dos seus atendimentos.</p><ul><li><CalendarDays size={20}/><div><strong>Agenda e reservas</strong><small>Organização dos horários e atendimentos.</small></div></li><li><Users size={20}/><div><strong>Equipe e clientes</strong><small>Cadastros e informações do salão.</small></div></li><li><Settings size={20}/><div><strong>Operação do salão</strong><small>Serviços, expediente e disponibilidade.</small></div></li></ul></div><small className="admin-access-brand-footer">PAINEL ADMINISTRATIVO · ACESSO RESTRITO</small></aside><main className="admin-access-main"><div className="admin-access-card"><span className="admin-access-lock"><ShieldCheck size={24}/></span><p className="admin-access-label">ACESSO AO GERENCIADOR</p><Account onLogin={onLogin} title="Acessar gerenciador" submitLabel="Acessar gerenciador"/><p className="admin-access-help">Use o e-mail e a senha cadastrados para seu perfil de acesso.</p>{notice&&<p className="notice" role="alert">{notice}</p>}<a className="admin-access-back" href="/"><ArrowLeft size={15}/>Voltar ao site</a></div><small className="admin-access-footer">Bogéa Glam Studio · Gestão do salão</small></main></div>;
+}
+

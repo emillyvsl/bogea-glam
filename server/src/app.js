@@ -3,7 +3,7 @@ import {frontendOrigin} from './config.js';
 import express from 'express';
 import cors from 'cors';
 import { prisma } from './db.js';
-import { registerAuth, requireAdmin, requireRoot, isRoot, isManagement, requireUser, requireStaff } from './auth.js';
+import { registerAuth, requireAdmin, requireRoot, requireBookingUser, isRoot, isManagement, requireUser, requireStaff } from './auth.js';
 import { hashPassword } from './password.js';
 import { validDate, minutesToTime } from './scheduling.js';
 import { getSalon, validateHours, locked, fail, asDate, cleanText, phone, bookingContext, availablePlan, createBooking, presentBooking, dateString } from './salon.js';
@@ -66,7 +66,7 @@ app.get('/api/availability/dates', async(req,res)=>{
   }
   res.json({month,days});
 });
-app.post('/api/bookings', requireUser, async (req,res) => {
+app.post('/api/bookings', requireBookingUser, async (req,res) => {
   const b = await createBooking(req.body,req.user);
   res.status(201).json({ bookingId: b.id, expiresAt: b.expiresAt, status: b.status, totalPrice: Number(b.totalPrice), deposit: Number(b.deposit) });
 });
@@ -88,11 +88,11 @@ async function reservationSnapshot(id,user) {
   const payment=b.payments[0];
   return {booking:presentBooking(b),payment:payment?{status:payment.status,reason:payment.reason,checkoutUrl:payment.checkoutUrl}:null,serverNow:new Date().toISOString()};
 }
-app.get('/api/bookings/pending',requireUser,async(req,res)=>{
+app.get('/api/bookings/pending',requireBookingUser,async(req,res)=>{
   const latest=await prisma.booking.findFirst({where:{customerId:req.user.id,status:'Aguardando pagamento',expiresAt:{gt:new Date()}},orderBy:{createdAt:'desc'}});
   res.json(latest?await reservationSnapshot(latest.id,req.user):{booking:null});
 });
-app.get('/api/bookings/:id',requireUser,async(req,res)=>{
+app.get('/api/bookings/:id',requireBookingUser,async(req,res)=>{
   const id=Number(req.params.id);if(!Number.isInteger(id)||id<1)fail('Reserva inválida.');
   res.json(await reservationSnapshot(id,req.user));
 });
@@ -130,7 +130,7 @@ app.patch('/api/bookings/:id/deposit',requireRoot,async(req,res)=>{
   res.json({ok:true});scheduleNotificationDispatch();
 });
 app.get('/api/admin/workspace', requireAdmin, async (req,res) => {
-  const [salon,services,professionals,blocks,payments,notifications,categories] = await Promise.all([getSalon(),prisma.service.findMany({ orderBy: { id: 'asc' } }),prisma.professional.findMany({ orderBy: { id: 'asc' } }),prisma.block.findMany({ orderBy: { date: 'asc' } }),prisma.payment.findMany({ orderBy: { createdAt: 'desc' }, take: 200 }),prisma.notification.findMany({ orderBy: { id: 'desc' }, take: 200 }),prisma.category.findMany({orderBy:{name:'asc'}})]);
+  const [salon,services,professionals,blocks,payments,notifications,categories] = await Promise.all([getSalon(),prisma.service.findMany({ orderBy: { id: 'asc' } }),prisma.professional.findMany({ orderBy: { id: 'asc' },include:{user:{select:{role:true}}} }),prisma.block.findMany({ orderBy: { date: 'asc' } }),prisma.payment.findMany({ orderBy: { createdAt: 'desc' }, take: 200 }),prisma.notification.findMany({ orderBy: { id: 'desc' }, take: 200 }),prisma.category.findMany({orderBy:{name:'asc'}})]);
   res.json({ paymentEvents:isRoot(req.user)?await prisma.paymentEvent.findMany({orderBy:{createdAt:'desc'},take:100}):[],salon,services,professionals,blocks,payments:isRoot(req.user)?payments:[],notifications:isRoot(req.user)?notifications:[],categories,confirmationDraft:isRoot(req.user)?confirmationPreview():null,integrations: { payments: paymentsConfigured(), whatsapp: notificationsConfigured(), whatsappProvider:whatsappProvider(),whatsappDemo:whatsappProvider()==='meta'&&process.env.META_WHATSAPP_CONFIRMATION_TEMPLATE==='jaspers_market_order_confirmation_v1',metaConfigured:metaConfigured(),webhook: webhookEnabled(), reminders: process.env.REMINDERS_ENABLED === 'true' } });
 });
 app.put('/api/admin/salon', requireAdmin, async (req,res) => {
@@ -171,6 +171,9 @@ app.patch('/api/admin/professionals/:id/active', requireAdmin, async(req,res)=>{
   const id=Number(req.params.id);
   if(!Number.isInteger(id)||id<1||typeof req.body.active!=='boolean')fail('Profissional inválido.');
   res.json(await locked(async tx=>{
+    const previous=await tx.professional.findUnique({where:{id},include:{user:{select:{role:true}}}});
+    if(previous?.user?.role==='ROOT'&&!isRoot(req.user))fail('Somente root pode gerenciar contas root.',403);
+    if(previous?.userId===req.user.id&&req.body.active===false)fail('Você não pode desativar a própria conta.');
     const professional=await tx.professional.update({where:{id},data:{active:req.body.active}});
     if(professional.userId){
       await tx.user.update({where:{id:professional.userId},data:{active:req.body.active}});
@@ -187,15 +190,19 @@ app.post('/api/admin/professionals', requireAdmin, async (req,res) => {
   if (password && (typeof password !== 'string' || password.length < 12 || password.length > 256)) fail('A senha deve ter entre 12 e 256 caracteres.');
   const passwordHash = password ? await hashPassword(password) : null;
   const result = await locked(async tx => {
-    const previous = id ? await tx.professional.findUnique({ where: { id } }) : null;
+    const previous = id ? await tx.professional.findUnique({ where: { id },include:{user:{select:{role:true}}} }) : null;
+    const role=req.body.role||previous?.user?.role||'EMPLOYEE';
+    if(!['ROOT','MANAGER','EMPLOYEE'].includes(role))fail('Perfil inválido.');
+    if(!isRoot(req.user)&&(role==='ROOT'||previous?.user?.role==='ROOT'))fail('Somente root pode gerenciar contas root.',403);
+    if(previous?.userId===req.user.id&&(role!==req.user.role||req.body.active!==true))fail('Não altere seu próprio perfil nem desative sua conta.');
     if (id && !previous) fail('Profissional não encontrado.',404);
     if (!previous?.userId && !passwordHash) fail('Informe a senha inicial de acesso.');
     if (await tx.service.count({ where: { id: { in: serviceIds } } }) !== new Set(serviceIds).size) fail('Serviço inválido.');
     const existing = await tx.user.findUnique({ where: { email } });
     if (existing && existing.id !== previous?.userId) fail('Este e-mail já está vinculado a outra conta.',409);
-    const userData = { email,name,active: req.body.active === true,...(passwordHash ? { passwordHash } : {}) };
-    const user = previous?.userId ? await tx.user.update({ where: { id: previous.userId }, data: userData }) : await tx.user.create({ data: { ...userData, passwordHash, role: 'EMPLOYEE' } });
-    if (passwordHash || req.body.active !== true) await tx.session.deleteMany({ where: { userId: user.id } });
+    const userData = { email,name,role,active: req.body.active === true,...(passwordHash ? { passwordHash } : {}) };
+    const user = previous?.userId ? await tx.user.update({ where: { id: previous.userId }, data: userData }) : await tx.user.create({ data: { ...userData, passwordHash } });
+    if (passwordHash || req.body.active !== true || previous?.user?.role!==role) await tx.session.deleteMany({ where: { userId: user.id } });
     const data = { name,email,active: req.body.active === true,hours: hours === null ? undefined : hours,serviceIds,allServices: allServices === true,userId: user.id };
     if (hours === null && previous) await tx.$executeRaw`UPDATE professionals SET hours = NULL WHERE id = ${id}`;
     return id ? tx.professional.update({ where: { id }, data }) : tx.professional.create({ data });
@@ -219,8 +226,8 @@ app.delete('/api/admin/blocks/:id', requireAdmin, async (req,res) => {
   await locked(tx => tx.block.delete({ where: { id } })); res.json({ ok: true });
 });
 app.get('/api/payments/config', (_req,res) => res.json({ configured: paymentsConfigured() }));
-app.post('/api/payments/checkout', requireUser, async (req,res) => res.json(await checkout(req.body.bookingId,req.user,req.body.retry===true)));
-app.post('/api/payments/check', requireUser, async (req,res) => res.json(await verifyPayment(req.body,req.user)));
+app.post('/api/payments/checkout', requireBookingUser, async (req,res) => res.json(await checkout(req.body.bookingId,req.user,req.body.retry===true)));
+app.post('/api/payments/check', requireBookingUser, async (req,res) => res.json(await verifyPayment(req.body,req.user)));
 registerPaymentEvents(app,requireRoot);
 app.post('/api/admin/notifications/run', requireRoot, async (_req,res) => res.json(await processNotifications()));
 app.post('/api/admin/notifications/test',requireRoot,async(req,res)=>{
@@ -232,6 +239,8 @@ app.use((error,_req,res,_next) => {
   if (status === 500) console.error(error.message);
   res.status(status).json({ error: status === 413 ? 'A imagem excede o limite de 5 MB.' : status === 500 ? 'Não foi possível concluir a operação.' : error.code === 'P2002' ? 'Registro já cadastrado.' : error.code === 'P2025' ? 'Registro não encontrado.' : error.message });
 });
+
+
 
 
 

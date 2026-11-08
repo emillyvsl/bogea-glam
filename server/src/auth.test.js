@@ -1,7 +1,7 @@
-import test from 'node:test';
+﻿import test from 'node:test';
 import assert from 'node:assert/strict';
 import express from 'express';
-import { registerAuth, adminGuard } from './auth.js';
+import { registerAuth, adminGuard,sessionCookieOptions } from './auth.js';
 import { hashPassword } from './password.js';
 
 test('login HTTP, sessão, logout, expiração e acesso negado', async t => {
@@ -51,4 +51,12 @@ test('login HTTP, sessão, logout, expiração e acesso negado', async t => {
   assert.equal((await fetch(`${base}/me`, { headers })).status, 401);
   for (let attempt = 0; attempt < 10; attempt++) assert.equal((await login('errada')).status, 401);
   assert.equal((await login('senha-de-teste-123')).status, 429);
+});
+
+test('cookie de sessão: produção, sites diferentes e configuração inválida',()=>{
+  assert.deepEqual(sessionCookieOptions({}),{httpOnly:true,secure:false,sameSite:'lax',path:'/api'});
+  assert.deepEqual(sessionCookieOptions({NODE_ENV:'production'}),{httpOnly:true,secure:true,sameSite:'lax',path:'/api'});
+  assert.deepEqual(sessionCookieOptions({NODE_ENV:'production',COOKIE_SAME_SITE:'None'}),{httpOnly:true,secure:true,sameSite:'none',path:'/api'});
+  assert.equal(sessionCookieOptions({COOKIE_SAME_SITE:'none'}).secure,true);
+  assert.throws(()=>sessionCookieOptions({COOKIE_SAME_SITE:'invalid'}),/COOKIE_SAME_SITE/);
 });
