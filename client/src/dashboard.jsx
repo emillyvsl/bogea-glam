@@ -10,13 +10,13 @@ const shift=(value,days)=>{const d=toDate(value);d.setUTCDate(d.getUTCDate()+day
 const monthLabel=value=>new Intl.DateTimeFormat('pt-BR',{month:'long',year:'numeric',timeZone:'UTC'}).format(toDate(value));
 const displayDate=value=>new Intl.DateTimeFormat('pt-BR',{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'}).format(toDate(value));
 const weekdays=['S','T','Q','Q','S','S','D'];
-const icons={'Minha conta':UserRound,Agenda:CalendarDays,Histórico:History,Serviços:Scissors,Categorias:Tags,Clientes:Users,Pagamentos:Wallet,WhatsApp:MessageCircle,Funcionamento:Settings,Equipe:UserRound,Bloqueios:LockKeyhole};
+const icons={'Meu perfil':UserRound,Agenda:CalendarDays,Histórico:History,Serviços:Scissors,Categorias:Tags,Clientes:Users,Pagamentos:Wallet,WhatsApp:MessageCircle,Funcionamento:Settings,Equipe:UserRound,Bloqueios:LockKeyhole};
 
 export function DashboardShell({user,tab,setTab,workspace,bookings,onLogout,children}) {
   const [menu,setMenu]=useState(false),[alerts,setAlerts]=useState(false);
   const admin=['ROOT','ADMIN','MANAGER'].includes(user.role);
   const root=['ROOT','ADMIN'].includes(user.role);
-  const tabs=admin?['Agenda','Histórico','Serviços','Categorias','Clientes',...(root?['Pagamentos','WhatsApp']:[]),'Funcionamento','Equipe','Bloqueios','Minha conta']:['Agenda','Minha conta'];
+  const tabs=admin?['Agenda','Histórico','Serviços','Categorias','Clientes',...(root?['Pagamentos','WhatsApp']:[]),'Funcionamento','Equipe','Bloqueios','Meu perfil']:['Agenda','Meu perfil'];
   const pending=bookings.filter(b=>b.status==='Aguardando pagamento').length;
   const nextConfirmed=bookings.filter(b=>b.booking_date>=today()&&b.status==='Confirmado').sort((a,b)=>a.booking_date.localeCompare(b.booking_date)||a.start_minute-b.start_minute);
   const name=workspace?.salon.name||'Bogéa Glam';

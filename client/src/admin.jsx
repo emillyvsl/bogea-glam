@@ -3,7 +3,7 @@ import BookingHistory from './booking-history';
 import Categories from './categories';
 import React,{ useEffect,useState } from 'react';
 import Account from './account';
-import GoogleCalendarSettings from './google-calendar-settings';
+import MyProfile from './my-profile';
 import WhatsAppPanel from './whatsapp-panel';
 import {showError,showSuccess,confirmAction} from './alerts';
 import Brand from './brand';
@@ -54,7 +54,7 @@ function BookingCard({ b,user,save,setNotice }) {
 }
 
 export default function Admin() {
-  const [user,setUser]=useState(null),[loading,setLoading]=useState(true),[bookings,setBookings]=useState([]),[workspace,setWorkspace]=useState(null),[tab,setTab]=useState(new URLSearchParams(location.search).has('google')?'Minha conta':'Agenda'),[notice,setNotice]=useState(''),[busy,setBusy]=useState(false);
+  const [user,setUser]=useState(null),[loading,setLoading]=useState(true),[bookings,setBookings]=useState([]),[workspace,setWorkspace]=useState(null),[tab,setTab]=useState(new URLSearchParams(location.search).has('google')?'Meu perfil':'Agenda'),[notice,setNotice]=useState(''),[busy,setBusy]=useState(false);
   const load=async who=>{setBookings(await api('/bookings'));if(['ROOT','ADMIN','MANAGER'].includes(who.role))setWorkspace(await api('/admin/workspace'));else if(who.role==='EMPLOYEE'){const catalog=await api('/catalog');setWorkspace({salon:catalog.salon,professionals:catalog.professionals.filter(p=>p.id===who.professionalId),blocks:[]});}};
   useEffect(()=>{api('/auth/me').then(async d=>{await load(d.user);setUser(d.user);}).catch(e=>{if(e.status!==401){setNotice(e.message);showError(e.message);}}).finally(()=>setLoading(false));},[]);
   const save=async(path,body,method='POST')=>{if((path.endsWith('/active')&&body.active===false)||body.status==='Cancelado'){if(!await confirmAction('Confirmar alteração?',body.status==='Cancelado'?'O atendimento será cancelado e o horário ficará livre para novas reservas.':'O registro será desativado para novos agendamentos.','Sim, confirmar'))return false;}setBusy(true);setNotice('');try{await send(path,body,method);await load(user);showSuccess(method==='DELETE'?'Removido com sucesso.':'Salvo com sucesso.');return true;}catch(e){setNotice(e.message);showError(e.message);if(e.status===401)setUser(null);return false;}finally{setBusy(false);}};
@@ -72,7 +72,7 @@ export default function Admin() {
   return <DashboardShell user={user} tab={tab} setTab={t=>{setTab(t);setNotice('');}} workspace={workspace} bookings={bookings} onLogout={onLogout}>
     {!agenda&&<section className="dashboard-intro"><div><p className="eyebrow">ADMINISTRAÇÃO</p><h1>{tab==='Funcionamento'?'Configurações':tab==='Bloqueios'?'Bloqueios de agenda':tab}</h1><p>Consulte registros e gerencie as informações do salão.</p></div></section>}
     <fieldset className="workspace-body" disabled={busy}>
-    {tab==='Minha conta'&&<GoogleCalendarSettings user={user}/>}
+    {tab==='Meu perfil'&&<MyProfile user={user} onUpdate={async updated=>{setUser(updated);await load(updated);}}/>}
     {agenda&&<AgendaView bookings={bookings} workspace={workspace} user={user} onNew={()=>setTab('Novo agendamento')} onTeam={()=>setTab('Equipe')} onRefresh={()=>load(user).catch(e=>{setNotice(e.message);showError(e.message);})} renderBooking={b=><BookingCard key={b.id} b={b} user={user} save={save} setNotice={setNotice}/>}/>}
     {['ROOT','ADMIN','MANAGER'].includes(user.role)&&tab==='Histórico'&&<BookingHistory bookings={bookings}/>} 
     {workspace&&tab==='Categorias'&&<Categories categories={workspace.categories||[]} services={workspace.services} save={save}/>} 

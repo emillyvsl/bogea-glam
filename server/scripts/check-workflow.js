@@ -241,6 +241,18 @@ export async function checkWorkflow(env) {
       assert.equal((await request('/payments/checkout',{bookingId:cancelId},customer.cookie)).status,409);
       assert.ok((await request(`/availability?date=${date}&professionalId=${professional.id}&serviceIds=${service.id}`)).data.slots.some(s=>s.start===startMinute));
     }
+    const profileData={name:'Profissional atualizada',email:professional.email};
+    assert.equal((await request('/auth/profile',profileData,customer.cookie,'PATCH')).status,403);
+    assert.equal((await request('/auth/profile',{...profileData,email:'updated@example.test',currentPassword:'wrong'},staff.cookie,'PATCH')).status,400);
+    const profileResult=await request('/auth/profile',{...profileData,role:'ROOT'},staff.cookie,'PATCH');assert.equal(profileResult.status,200);assert.equal(profileResult.data.user.role,'EMPLOYEE');
+    assert.equal((await prisma.professional.findUnique({where:{id:professional.id}})).name,profileData.name);
+    const secondSession=await request('/auth/login',{email:professional.email,password:'staff-test-password'});
+    const newCredentials={...profileData,email:'updated@example.test',currentPassword:'staff-test-password',newPassword:'updated-password-test'};
+    assert.equal((await request('/auth/profile',newCredentials,staff.cookie,'PATCH')).status,200);
+    assert.equal((await request('/auth/me',null,secondSession.cookie)).status,401);
+    assert.equal((await request('/auth/me',null,staff.cookie)).status,200);
+    assert.equal((await request('/auth/login',{email:newCredentials.email,password:newCredentials.newPassword})).status,200);
+    assert.equal((await prisma.professional.findUnique({where:{id:professional.id}})).email,newCredentials.email);
     assert.equal((await request(`/admin/professionals/${professional.id}/active`,{active:false},admin.cookie,'PATCH')).status,200);
     assert.equal((await request('/bookings',null,staff.cookie)).status,401);
     console.log('OK: login de cliente/equipe, isolamento, consentimento opcional, conflitos simultâneos, bloqueios, agendamento manual e validação de pagamentos (provedor simulado).');

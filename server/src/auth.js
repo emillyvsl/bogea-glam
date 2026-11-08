@@ -77,6 +77,27 @@ export function registerAuth(app, database = prisma) {
   });
   app.get('/api/auth/booking-session',requireBookingUser,(req,res)=>res.json({user:publicUser(req.user)}));
   app.get('/api/auth/me', requireUser, (req, res) => res.json({ user: publicUser(req.user) }));
+  app.patch('/api/auth/profile', adminGuard(database,['ROOT','ADMIN','MANAGER','EMPLOYEE']), async (req,res,next) => {
+    try {
+      const key=`profile:${req.user.id}`,now=Date.now(),attempt=attempts.get(key);
+      if(attempt&&attempt.until>now&&attempt.count>=10)return res.status(429).json({error:'Muitas tentativas. Aguarde 15 minutos.'});
+      if(!attempt||attempt.until<=now)attempts.set(key,{count:1,until:now+15*60000});else attempt.count++;
+      const {name,email,currentPassword,newPassword}=req.body;
+      if(typeof name!=='string'||name.trim().length<2||name.length>120||typeof email!=='string'||email.length>254||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))return res.status(400).json({error:'Informe nome e e-mail válidos.'});
+      if(newPassword!==undefined&&newPassword!==''&&(typeof newPassword!=='string'||newPassword.length<12||newPassword.length>256))return res.status(400).json({error:'A nova senha deve ter de 12 a 256 caracteres.'});
+      const normalizedEmail=email.trim().toLowerCase(),sensitive=normalizedEmail!==req.user.email||!!newPassword;
+      if(sensitive&&(typeof currentPassword!=='string'||currentPassword.length>256||!await verifyPassword(currentPassword,req.user.passwordHash)))return res.status(400).json({error:'Informe sua senha atual corretamente para alterar o e-mail ou a senha.'});
+      const passwordHash=newPassword?await hashPassword(newPassword):req.user.passwordHash;
+      const user=await database.$transaction(async tx=>{
+        const changed=await tx.user.updateMany({where:{id:req.user.id,passwordHash:req.user.passwordHash,active:true},data:{name:name.trim(),email:normalizedEmail,passwordHash}});
+        if(changed.count!==1)throw Object.assign(new Error('Seus dados mudaram. Entre novamente e tente outra vez.'),{status:409});
+        await tx.professional.updateMany({where:{userId:req.user.id},data:{name:name.trim(),email:normalizedEmail}});
+        if(sensitive)await tx.session.deleteMany({where:{userId:req.user.id,tokenHash:{not:tokenHash(readToken(req))}}});
+        return tx.user.findUnique({where:{id:req.user.id},include:{professional:true}});
+      });
+      res.json({user:publicUser(user)});
+    }catch(error){if(error.code==='P2002')return res.status(409).json({error:'Este e-mail já está em uso.'});next(error);}
+  });
   app.post('/api/auth/logout', async (req, res) => {
     const token = req.bookingAccess?(readToken(req,'bogea_guest_session')||readToken(req)):readToken(req);
     if (token) await database.session.deleteMany({ where: { tokenHash: tokenHash(token) } });
