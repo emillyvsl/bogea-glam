@@ -8,12 +8,13 @@ const requestOptions={timeout:20000,retry:false};
 export async function processGoogleCalendar({db=prisma,eventsFor=calendarClient,force=false}={}){
   if(!force&&!googleConfigured())return;
   const now=new Date(),stale=new Date(now-120000);
+  const salon=await db.salon.findUnique({where:{id:1}})||{};
   // Reconcile source changes too (including reassignment); PostgreSQL is authoritative.
   const sources=await db.booking.findMany({where:{OR:[{status:{in:['Confirmado','Em atendimento']},bookingDate:{gte:new Date(localNow(now).date+'T00:00:00Z')}},{googleSync:{isNot:null}}]},include:{professional:true,googleSync:true}});
   for(const b of sources){
     const connected=b.professionalId&&await db.googleCalendarConnection.findFirst({where:{professionalId:b.professionalId,status:'CONNECTED'}});
     if(!b.googleSync){if(connected&&calendarBookingActive(b))await db.googleCalendarSync.upsert({where:{bookingId:b.id},create:{bookingId:b.id},update:{}});continue;}
-    const changed=calendarBookingActive(b)?connected&&(b.googleSync.connectionId!==connected.id||b.googleSync.fingerprint!==eventFingerprint(b)):!!b.googleSync.googleEventId;
+    const changed=calendarBookingActive(b)?connected&&(b.googleSync.connectionId!==connected.id||b.googleSync.fingerprint!==eventFingerprint(b,salon)):!!b.googleSync.googleEventId;
     if(changed&&['SYNCED','SKIPPED'].includes(b.googleSync.status))await db.googleCalendarSync.update({where:{id:b.googleSync.id},data:{status:'PENDING',revision:{increment:1},nextAttemptAt:now}});
   }
   const jobs=await db.googleCalendarSync.findMany({where:{nextAttemptAt:{lte:now},OR:[{status:'PENDING'},{status:'RETRY'},{status:'PROCESSING',claimedAt:{lt:stale}}]},take:25,orderBy:{nextAttemptAt:'asc'}});
@@ -42,7 +43,7 @@ export async function processGoogleCalendar({db=prisma,eventsFor=calendarClient,
         job.generation++;
       }
       if(!destination){await finish({status:'SKIPPED',lastError:calendarBookingActive(booking)?'Profissional sem Google Agenda conectado.':null});continue;}
-      const id=eventId(booking.id,destination,job.generation),body=bookingEvent(booking),fingerprint=eventFingerprint(booking);
+      const id=eventId(booking.id,destination,job.generation),body=bookingEvent(booking,salon),fingerprint=eventFingerprint(booking,salon);
       body.extendedProperties.private.bogeaFingerprint=fingerprint;
       // Persist intent BEFORE insert: a cancellation/reassignment can recover a lost response.
       await db.googleCalendarSync.updateMany({where:owned,data:{connectionId:destination.id,calendarId:destination.calendarId,googleEventId:id}});

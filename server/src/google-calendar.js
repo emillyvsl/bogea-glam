@@ -28,16 +28,30 @@ export function calendarClient(connection){
   const auth=createOAuthClient();auth.setCredentials({refresh_token:decryptToken(connection.refreshTokenEncrypted)});
   return google.calendar({version:'v3',auth}).events;
 }
-export function bookingEvent(booking){
+export function bookingEvent(booking,salon={}){
   const date=booking.bookingDate.toISOString().slice(0,10);
   const instant=minute=>`${date}T${String(Math.floor(minute/60)).padStart(2,'0')}:${String(minute%60).padStart(2,'0')}:00-05:00`;
-  return {summary:`Bogéa Glam — ${booking.serviceNames.join(', ')}`,
-    description:`Cliente: ${booking.clientName}\nWhatsApp: ${booking.whatsapp}\nProtocolo: ${booking.protocol||`Reserva #${booking.id}`}\nProfissional: ${booking.professional?.name||''}`,
+  const time=minute=>`${String(Math.floor(minute/60)).padStart(2,'0')}:${String(minute%60).padStart(2,'0')}`;
+  const raw=String(booking.whatsapp||'').replace(/\D/g,''),digits=raw.startsWith('55')&&raw.length>11?raw.slice(2):raw;
+  const whatsapp=/^\d{10,11}$/.test(digits)?`(${digits.slice(0,2)}) ${digits.slice(2,-4)}-${digits.slice(-4)}`:booking.whatsapp;
+  const services=booking.serviceNames.join(' + ');
+  return {summary:`Bogéa Glam — ${services}`,
+    description:[
+      'Agendamento confirmado no Bogéa Glam','',
+      `Cliente: ${booking.clientName}`,`Profissional: ${booking.professional?.name||'Profissional do salão'}`,
+      `Serviço: ${services}`,`Data: ${date.split('-').reverse().join('/')}`,
+      `Horário: ${time(booking.startMinute)} às ${time(booking.endMinute)} (Rio Branco)`,
+      `WhatsApp: ${whatsapp}`,`Protocolo: ${booking.protocol||`Reserva #${booking.id}`}`,
+      ...(salon.address?[`Local: ${salon.address}`]:[]),'',
+      'Em caso de dúvidas, entre em contato com o salão: suportebogeaglam@gmail.com.',
+      'Para cancelar ou reagendar, fale com o salão pelo WhatsApp (68) 99912-4302. Alterar este evento no Google não altera a reserva no sistema.'
+    ].join('\n'),
+    ...(salon.address?{location:salon.address}:{}),
     start:{dateTime:instant(booking.startMinute),timeZone:'America/Rio_Branco'},end:{dateTime:instant(booking.endMinute),timeZone:'America/Rio_Branco'},
     attendees:booking.clientEmail?[{email:booking.clientEmail}]:[],guestsCanModify:false,guestsCanInviteOthers:false,visibility:'private',
     extendedProperties:{private:{bogeaBooking:String(booking.id)}}};
 }
-export const eventFingerprint=booking=>digest(JSON.stringify({professionalId:booking.professionalId,event:bookingEvent(booking)}));
+export const eventFingerprint=(booking,salon={})=>digest(JSON.stringify({professionalId:booking.professionalId,event:bookingEvent(booking,salon)}));
 export const calendarBookingActive=b=>['Confirmado','Em atendimento','Concluído'].includes(b.status);
 // Persist only. No Google request is made inside a payment/booking transaction.
 export async function queueGoogleCalendar(db,booking){

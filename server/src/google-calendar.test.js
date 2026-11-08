@@ -14,6 +14,10 @@ test('Google events use Rio Branco time and optional invitations without exposin
   const b={id:8,bookingDate:new Date('2026-11-10'),startMinute:480,endMinute:570,clientName:'Cliente',whatsapp:'68999999999',serviceNames:['Escova'],protocol:'BG-123',deposit:36};
   const event=bookingEvent(b);assert.equal(event.start.dateTime,'2026-11-10T08:00:00-05:00');assert.equal(event.end.dateTime,'2026-11-10T09:30:00-05:00');assert.deepEqual(event.attendees,[]);assert.ok(event.description.includes('BG-123'));assert.ok(!JSON.stringify(event).includes('deposit'));
   assert.deepEqual(bookingEvent({...b,clientEmail:'cliente@example.com'}).attendees,[{email:'cliente@example.com'}]);
+  const localized=bookingEvent({...b,whatsapp:'5568999999999',serviceNames:['Escova','Corte'],professional:{name:'Vitória Bogéa'}},{address:'Rua do salão, Rio Branco — AC'});
+  assert.equal(localized.summary,'Bogéa Glam — Escova + Corte');
+  for(const text of ['Agendamento confirmado no Bogéa Glam','Data: 10/11/2026','Horário: 08:00 às 09:30','WhatsApp: (68) 99999-9999','Profissional: Vitória Bogéa'])assert.ok(localized.description.includes(text));
+  assert.equal(localized.location,'Rua do salão, Rio Branco — AC');assert.equal(event.location,undefined);
 });
 test('Google IDs are stable, valid and unique per destination and generation',()=>{
   const c={id:'a',calendarId:'primary'};assert.match(eventId(8,c),/^[a-v0-9]{5,1024}$/);assert.equal(eventId(8,c),eventId(8,c));assert.notEqual(eventId(8,c),eventId(8,{...c,id:'b'}));assert.notEqual(eventId(8,c),eventId(8,c,1));
