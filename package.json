@@ -6,7 +6,7 @@
     "server": "npm --prefix server run dev",
     "client": "npm --prefix client run dev",
     "build": "npm --prefix client run build",
-    "test": "node --test server/src/scheduling.test.js server/src/password.test.js server/src/auth.test.js server/src/meta-whatsapp.test.js server/src/google-calendar.test.js",
+    "test": "node --test server/src/scheduling.test.js server/src/password.test.js server/src/auth.test.js server/src/meta-whatsapp.test.js server/src/google-calendar.test.js server/src/booking-email.test.js",
     "db:setup": "npm --prefix server run db:setup",
     "db:migrate": "npm --prefix server run db:migrate --",
     "db:deploy": "npm --prefix server run db:deploy",
