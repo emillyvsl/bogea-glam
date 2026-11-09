@@ -1,3 +1,4 @@
+import {formatWhatsApp} from './phone';
 import BookingCalendar from './booking-calendar';
 import React,{useEffect,useState,useRef} from 'react';
 import {Search,X} from 'lucide-react';
@@ -39,7 +40,7 @@ export default function ManualBooking({workspace,save,onCancel}){
   }
   return <form className="editor manual-booking" onSubmit={submit}><h3 className="manual-section-title">Dados da cliente</h3>
 
-    <div className="form-grid"><label>Cliente<input placeholder="Nome completo" autoComplete="name" required value={form.clientName} onChange={e=>setForm({...form,clientName:e.target.value})}/></label><label>WhatsApp com DDD<input placeholder="(68) 99999-9999" autoComplete="tel" type="tel" required value={form.whatsapp} onChange={e=>setForm({...form,whatsapp:e.target.value})}/></label></div>
+    <div className="form-grid"><label>Cliente<input placeholder="Nome completo" autoComplete="name" required value={form.clientName} onChange={e=>setForm({...form,clientName:e.target.value})}/></label><label>WhatsApp com DDD<input placeholder="(68) 99999-9999" autoComplete="tel" type="tel" inputMode="numeric" pattern="\([0-9]{2}\) [0-9]{4,5}-[0-9]{4}" title="Informe o DDD e o número do WhatsApp" required value={form.whatsapp} onChange={e=>setForm({...form,whatsapp:formatWhatsApp(e.target.value)})}/></label></div>
     <label>E-mail da cliente (opcional)<input placeholder="cliente@email.com" autoComplete="email" type="email" maxLength={254} value={form.clientEmail} onChange={e=>setForm({...form,clientEmail:e.target.value})}/></label>
     <fieldset className="manual-service-picker"><legend className="manual-section-title">Serviços do atendimento</legend>
       <div ref={picker} className="manual-service-field" onBlur={e=>{if(!e.currentTarget.contains(e.relatedTarget))setOpen(false);}} onKeyDown={e=>{if(e.key==='Escape')setOpen(false);}}>
