@@ -179,6 +179,16 @@ app.post('/api/admin/services', requireAdmin, async (req,res) => {
   if (id != null && (!Number.isInteger(id) || id < 1)) fail('Serviço inválido.');
   res.json(await locked(async tx => {if(!await tx.category.findUnique({where:{name:data.category}}))fail('Selecione uma categoria cadastrada.');return id ? tx.service.update({ where: { id }, data }) : tx.service.create({ data });}));
 });
+app.delete('/api/admin/services/:id',requireAdmin,async(req,res)=>{
+  const id=Number(req.params.id);if(!Number.isSafeInteger(id)||id<1)fail('Serviço inválido.');
+  await locked(async tx=>{
+    const service=await tx.service.findUnique({where:{id}});if(!service)fail('Serviço não encontrado.',404);
+    if(await tx.booking.count({where:{serviceIds:{has:id}}}))fail('Este serviço possui agendamentos no histórico. Desative-o para impedir novas reservas sem apagar os registros.',409);
+    const professionals=await tx.professional.findMany({where:{serviceIds:{has:id}}});
+    for(const professional of professionals)await tx.professional.update({where:{id:professional.id},data:{serviceIds:professional.serviceIds.filter(value=>value!==id)}});
+    await tx.service.delete({where:{id}});
+  });res.json({ok:true});
+});
 app.patch('/api/admin/services/:id/active', requireAdmin, async(req,res)=>{
   const id=Number(req.params.id);
   if(!Number.isInteger(id)||id<1||typeof req.body.active!=='boolean')fail('Serviço inválido.');

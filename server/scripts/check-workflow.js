@@ -243,6 +243,13 @@ export async function checkWorkflow(env) {
       assert.equal((await request('/payments/checkout',{bookingId:cancelId},customer.cookie)).status,409);
       assert.ok((await request(`/availability?date=${date}&professionalId=${professional.id}&serviceIds=${service.id}`)).data.slots.some(s=>s.start===startMinute));
     }
+    const deleteCategory=await prisma.category.create({data:{name:'Categoria para excluir'}});
+    const deleteService=await prisma.service.create({data:{name:'Serviço para excluir',category:deleteCategory.name,description:'Teste',duration:60,price:50,active:true}});
+    assert.equal((await request(`/admin/services/${deleteService.id}`,{},staff.cookie,'DELETE')).status,403);
+    assert.equal((await request(`/admin/categories/${deleteCategory.id}`,{},admin.cookie,'DELETE')).status,400);
+    assert.equal((await request(`/admin/services/${service.id}`,{},admin.cookie,'DELETE')).status,409);
+    assert.equal((await request(`/admin/services/${deleteService.id}`,{},admin.cookie,'DELETE')).status,200);
+    assert.equal((await request(`/admin/categories/${deleteCategory.id}`,{},admin.cookie,'DELETE')).status,200);
     const profileData={name:'Profissional atualizada',email:professional.email};
     assert.equal((await request('/auth/profile',profileData,customer.cookie,'PATCH')).status,403);
     assert.equal((await request('/auth/profile',{...profileData,email:'updated@example.test',currentPassword:'wrong'},staff.cookie,'PATCH')).status,400);
