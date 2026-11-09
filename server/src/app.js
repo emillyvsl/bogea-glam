@@ -214,7 +214,7 @@ app.post('/api/admin/professionals', requireAdmin, async (req,res) => {
   const email = cleanText(req.body.email,254).toLowerCase(), name = cleanText(req.body.name,120);
   if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !Array.isArray(serviceIds) || serviceIds.some(id => !Number.isInteger(id) || id < 1) || (id != null && (!Number.isInteger(id) || id < 1))) fail('Confira os dados do profissional.');
   if (hours != null) validateHours(hours);
-  if (password && (typeof password !== 'string' || password.length < 12 || password.length > 256)) fail('A senha deve ter entre 12 e 256 caracteres.');
+  if (password && (typeof password !== 'string' || password.length < 6 || password.length > 256)) fail('A senha deve ter entre 6 e 256 caracteres.');
   const passwordHash = password ? await hashPassword(password) : null;
   const result = await locked(async tx => {
     const previous = id ? await tx.professional.findUnique({ where: { id },include:{user:{select:{role:true}}} }) : null;
