@@ -52,7 +52,8 @@ export async function createBooking(body, user, manual = false) {
   const { date, professionalId, serviceIds, startMinute } = body;
   const clientName = cleanText(body.clientName,120), whatsapp = phone(body.whatsapp);
   const clientEmail=cleanText(body.clientEmail,254).toLowerCase();
-  if(clientEmail&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clientEmail))fail('Informe um e-mail válido ou deixe o campo vazio.');
+  if(!manual&&!clientEmail)fail('Informe o e-mail da cliente para reservar.');
+  if(clientEmail&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clientEmail))fail(manual?'Informe um e-mail válido ou deixe o campo vazio.':'Informe um e-mail válido para reservar.');
   if (clientName.length < 2 || !/^\d{10,13}$/.test(whatsapp)) fail('Informe nome e WhatsApp com DDD.');
   if (!manual && user.role === 'EMPLOYEE') fail('Funcionários não criam reservas.',403);
   return locked(async tx => {
