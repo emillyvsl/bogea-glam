@@ -1,10 +1,28 @@
 const sections=new Set(['trabalhos','sobre','booking','maquiagem']);
 const storageKey='bogea-section-navigation';
+let cancelNavigation=()=>{};
 function scrollToSection(id){
+  cancelNavigation();
   let observer,timer;
-  const scroll=()=>{const element=document.getElementById(id);if(!element)return false;element.scrollIntoView({block:'start',behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});observer?.disconnect();clearTimeout(timer);return true;};
+  const scroll=()=>{
+    const element=document.getElementById(id);if(!element)return false;
+    observer?.disconnect();clearTimeout(timer);
+    const started=performance.now();let correction;
+    const align=()=>{clearTimeout(correction);correction=setTimeout(()=>{
+      const margin=parseFloat(getComputedStyle(element).scrollMarginTop)||0;
+      if(Math.abs(element.getBoundingClientRect().top-margin)>4)element.scrollIntoView({block:'start',behavior:'instant'});
+    },Math.max(120,650-(performance.now()-started)));};
+    const resize=new ResizeObserver(align);resize.observe(document.body);resize.observe(element);
+    const stop=()=>{resize.disconnect();clearTimeout(correction);clearTimeout(timer);document.removeEventListener('load',align,true);for(const event of ['wheel','touchstart','pointerdown','keydown'])window.removeEventListener(event,stop);};
+    cancelNavigation=stop;
+    document.addEventListener('load',align,true);
+    for(const event of ['wheel','touchstart','pointerdown','keydown'])window.addEventListener(event,stop,{passive:true});
+    element.scrollIntoView({block:'start',behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
+    timer=setTimeout(stop,8000);return true;
+  };
   if(scroll())return;
   observer=new MutationObserver(scroll);observer.observe(document.body,{childList:true,subtree:true});timer=setTimeout(()=>observer.disconnect(),15000);
+  cancelNavigation=()=>{observer.disconnect();clearTimeout(timer);};
 }
 export function setupSectionNavigation(){
   const url=new URL(window.location.href);
