@@ -1,5 +1,6 @@
 import {createCipheriv,createDecipheriv,createHash,randomBytes} from 'node:crypto';
 import {google} from 'googleapis';
+import {frontendOrigin} from './config.js';
 
 export const googleEnabled=()=>process.env.GOOGLE_CALENDAR_ENABLED==='true';
 function encryptionKey(){
@@ -35,6 +36,8 @@ export function bookingEvent(booking,salon={}){
   const raw=String(booking.whatsapp||'').replace(/\D/g,''),digits=raw.startsWith('55')&&raw.length>11?raw.slice(2):raw;
   const whatsapp=/^\d{10,11}$/.test(digits)?`(${digits.slice(0,2)}) ${digits.slice(2,-4)}-${digits.slice(-4)}`:booking.whatsapp;
   const services=booking.serviceNames.join(' + ');
+  const lookup=new URL('/consultar',frontendOrigin());
+  if(booking.protocol)lookup.hash=new URLSearchParams({protocolo:booking.protocol}).toString();
   return {summary:`Bogéa Glam — ${services}`,
     description:[
       'Agendamento confirmado no Bogéa Glam','',
@@ -43,8 +46,9 @@ export function bookingEvent(booking,salon={}){
       `Horário: ${time(booking.startMinute)} às ${time(booking.endMinute)} (Rio Branco)`,
       `WhatsApp: ${whatsapp}`,`Protocolo: ${booking.protocol||`Reserva #${booking.id}`}`,
       ...(salon.address?[`Local: ${salon.address}`]:[]),'',
-      'Em caso de dúvidas, entre em contato com o salão: suportebogeaglam@gmail.com.',
-      'Para cancelar ou reagendar, fale com o salão pelo WhatsApp (68) 99912-4302. Alterar este evento no Google não altera a reserva no sistema.'
+      `Consulte seu agendamento: ${lookup.href}`,'',
+      'Para dúvidas, cancelamentos ou reagendamentos, fale com o salão pelo WhatsApp (68) 99912-4302: https://wa.me/5568999124302','',
+      'Alterar este evento no Google não altera a reserva no sistema.'
     ].join('\n'),
     ...(salon.address?{location:salon.address}:{}),
     start:{dateTime:instant(booking.startMinute),timeZone:'America/Rio_Branco'},end:{dateTime:instant(booking.endMinute),timeZone:'America/Rio_Branco'},

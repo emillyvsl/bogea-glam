@@ -14,7 +14,7 @@ function MakeupPortfolio(){
   const intro=works.find(work=>work[0]==='maquiagem');
   const styles=works.filter(work=>['glam','basica','fashion'].includes(work[0]));
   const [key,title,count,,description]=styles.find(work=>work[0]===style);
-  return <section className="makeup-showcase" id="maquiagem" aria-labelledby="makeup-title"><div className="makeup-intro"><p className="eyebrow">A ARTE DE REALÇAR VOCÊ</p><h2 id="makeup-title">Uma beleza.<br/><em>Diferentes versões de você.</em></h2><p>{intro[4]}</p></div><div className="makeup-style-picker" role="group" aria-label="Escolha o estilo de maquiagem">{styles.map(([id,name],i)=><button key={id} type="button" aria-pressed={style===id} onClick={()=>setStyle(id)}><span>0{i+1}</span><strong>{name}</strong><small>{id==='glam'?'Presença & sofisticação':id==='basica'?'Leveza & naturalidade':'Conceito & expressão'}</small></button>)}</div><div className="makeup-feature" key={key}><div className="makeup-feature-copy"><p className="eyebrow">MAQUIAGEM · {title.toUpperCase()}</p><h3>{title}</h3><p>{description}</p><a className="makeup-book" href="/servicos?busca=maquiagem#booking">Agendar maquiagem <span aria-hidden="true">↗</span></a></div><div className={`makeup-gallery makeup-photos-${count}`}>{Array.from({length:count},(_,i)=><img key={i} src={`/images/portfolio/${key}-${i+1}.webp`} alt={`Maquiagem ${title} por Vitória Bogéa — foto ${i+1}`} loading="lazy"/>)}</div></div><p className="makeup-signoff">Feita para a ocasião. <em>Pensada para você.</em></p></section>;
+  return <section className="makeup-showcase" id="maquiagem" aria-labelledby="makeup-title"><div className="makeup-intro"><p className="eyebrow">A ARTE DE REALÇAR VOCÊ</p><h2 id="makeup-title">Uma beleza.<br/><em>Diferentes versões de você.</em></h2><p>{intro[4]}</p></div><div className="makeup-style-picker" role="group" aria-label="Escolha o estilo de maquiagem">{styles.map(([id,name],i)=><button key={id} type="button" aria-pressed={style===id} onClick={()=>setStyle(id)}><span>0{i+1}</span><strong>{name}</strong><small>{id==='glam'?'Presença & sofisticação':id==='basica'?'Leveza & naturalidade':'Conceito & expressão'}</small></button>)}</div><div className="makeup-feature" key={key}><div className="makeup-feature-copy"><p className="eyebrow">MAQUIAGEM · {title.toUpperCase()}</p><h3>{title}</h3><p>{description}</p><a className="makeup-book" href="/agendar?busca=maquiagem#booking">Agendar maquiagem <span aria-hidden="true">↗</span></a></div><div className={`makeup-gallery makeup-photos-${count}`}>{Array.from({length:count},(_,i)=><img key={i} src={`/images/portfolio/${key}-${i+1}.webp`} alt={`Maquiagem ${title} por Vitória Bogéa — foto ${i+1}`} loading="lazy"/>)}</div></div><p className="makeup-signoff">Feita para a ocasião. <em>Pensada para você.</em></p></section>;
 }
 export default function PortfolioWorks() {
   return (
@@ -42,7 +42,7 @@ export default function PortfolioWorks() {
 
             <a
               className="portfolio-work-book"
-              href={`/servicos?busca=${encodeURIComponent(search)}`}
+              href={`/agendar?busca=${encodeURIComponent(search)}`}
             >
               Agendar
             </a>

@@ -34,7 +34,8 @@ app.post('/api/bookings/lookup',async(req,res)=>{
   if(!attempt||attempt.until<=now)protocolAttempts.set(key,{count:1,until:now+60000});else attempt.count++;
   if(protocolAttempts.size>1000)for(const [ip,item] of protocolAttempts)if(item.until<=now)protocolAttempts.delete(ip);
   const protocol=String(req.body.protocol||'').trim().toUpperCase();
-  if(!/^BG-[A-F0-9]{24}$/.test(protocol))return res.status(404).json({error:'Protocolo não encontrado. Confira o código recebido.'});
+  const short=/^BG-\d{4,12}$/.test(protocol);
+  if(!short&&!/^BG-[A-F0-9]{24}$/.test(protocol))return res.status(404).json({error:'Protocolo não encontrado. Confira o código recebido.'});
   const b=await prisma.booking.findUnique({where:{protocol},include:{professional:{select:{name:true}}}});
   if(!b)return res.status(404).json({error:'Protocolo não encontrado. Confira o código recebido.'});
   res.json({protocol:b.protocol,status:b.status,date:dateString(b.bookingDate),start:minutesToTime(b.startMinute),end:minutesToTime(b.endMinute),services:b.serviceNames,professional:b.professional?.name||'Profissional do salão'});

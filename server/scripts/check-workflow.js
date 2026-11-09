@@ -94,7 +94,7 @@ export async function checkWorkflow(env) {
     assert.equal((await request('/bookings/manual',{...body,startMinute:600},customer.cookie)).status,403);
     const manual=await request('/bookings/manual',{...body,startMinute:600,depositReceived:true},admin.cookie);assert.equal(manual.status,201);
     const withProtocol=await prisma.booking.findUnique({where:{id:manual.data.bookingId}});
-    assert.match(withProtocol.protocol,/^BG-[A-F0-9]{24}$/);
+    assert.match(withProtocol.protocol,/^BG-\d{4,12}$/);
     const lookup=await request('/bookings/lookup',{protocol:withProtocol.protocol});assert.equal(lookup.status,200);assert.equal(lookup.data.status,'Confirmado');assert.equal(lookup.data.whatsapp,undefined);assert.equal(lookup.data.clientName,undefined);assert.equal(lookup.data.totalPrice,undefined);
     assert.equal((await request('/bookings/lookup',{protocol:'BG-INVALID'})).status,404);
     const own=await request('/bookings',null,customer.cookie);assert.equal(own.data.length,1);

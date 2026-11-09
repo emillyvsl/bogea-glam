@@ -33,7 +33,7 @@ export function registerGoogleCalendar(app){
   app.get('/api/google-calendar/callback',requireStaff,async(req,res)=>{
     const professionalId=ownProfessional(req);
     if(!googleConfigured()||!professionalId||!await consumeOAuthState(prisma,req.query.state,req.user.id,professionalId,sessionHash(req)))return res.status(400).send('Autorização inválida ou expirada. Volte ao gerenciador e conecte novamente.');
-    const back=new URL(frontendOrigin());back.searchParams.set('painel','agenda');back.searchParams.set('google','error');
+    const back=new URL('/admin/perfil',frontendOrigin());back.searchParams.set('google','error');
     if(req.query.error||typeof req.query.code!=='string')return res.redirect(back.toString());
     try{
       const oauth=createOAuthClient();const {tokens}=await oauth.getToken({code:req.query.code});
