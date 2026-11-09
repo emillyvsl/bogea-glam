@@ -64,7 +64,17 @@ export default function Admin() {
     {['ROOT','ADMIN','MANAGER'].includes(user.role)&&tab==='Histórico'&&<BookingHistory bookings={bookings}/>} 
     {workspace&&tab==='Categorias'&&<Categories categories={workspace.categories||[]} services={workspace.services} save={save}/>} 
     {workspace&&tab==='Clientes'&&<ClientsView bookings={bookings}/>}
-    {workspace&&tab==='Novo agendamento'&&<Manual workspace={workspace} save={save} onCancel={()=>setTab('Agenda')}/>}
+    {workspace&&tab==='Novo agendamento'&&<Manual workspace={workspace} save={async(path,body)=>{
+      if(!await save(path,body))return false;
+      const url=new URL(window.location.href);
+      url.searchParams.set('painel','agenda');
+      url.searchParams.set('data',body.date);
+      url.searchParams.set('profissional',String(body.professionalId));
+      window.history.replaceState(null,'',url);
+      setTab('Agenda');
+      window.scrollTo({top:0,behavior:'instant'});
+      return true;
+    }} onCancel={()=>setTab('Agenda')}/>}
     {workspace&&tab==='Serviços'&&<Services services={workspace.services} categories={workspace.categories||[]} save={save}/>}
     {workspace&&tab==='Equipe'&&<Team user={user} professionals={workspace.professionals} services={workspace.services} categories={workspace.categories||[]} save={save}/>}
     {workspace&&tab==='Funcionamento'&&<Settings salon={workspace.salon} save={save}/>}
