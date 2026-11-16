@@ -13,6 +13,14 @@ export default function ManualBooking({workspace,save,onCancel}){
   const eligible=workspace.professionals.filter(p=>p.active&&(p.allServices||form.serviceIds.every(id=>p.serviceIds.includes(id))));
   const serviceKey=form.serviceIds.join(',');
   const filtered=services.filter(s=>normalized(`${s.name} ${s.category}`).includes(normalized(query)));
+  useEffect(()=>{
+    if(!open)return;
+    // Touch browsers can blur the input without focusing the tapped option.
+    // Close on an actual outside interaction so the option's click can finish.
+    const closeOutside=event=>{if(!picker.current?.contains(event.target))setOpen(false);};
+    document.addEventListener('pointerdown',closeOutside);
+    return()=>document.removeEventListener('pointerdown',closeOutside);
+  },[open]);
   function toggleService(id){
     setForm(current=>{
       const serviceIds=current.serviceIds.includes(id)?current.serviceIds.filter(value=>value!==id):[...current.serviceIds,id];
@@ -43,7 +51,7 @@ export default function ManualBooking({workspace,save,onCancel}){
     <div className="form-grid"><label>Cliente<input placeholder="Nome completo" autoComplete="name" required value={form.clientName} onChange={e=>setForm({...form,clientName:e.target.value})}/></label><label>WhatsApp com DDD<input placeholder="(68) 99999-9999" autoComplete="tel" type="tel" inputMode="numeric" pattern="\([0-9]{2}\) [0-9]{4,5}-[0-9]{4}" title="Informe o DDD e o número do WhatsApp" required value={form.whatsapp} onChange={e=>setForm({...form,whatsapp:formatWhatsApp(e.target.value)})}/></label></div>
     <label>E-mail da cliente (opcional)<input placeholder="cliente@email.com" autoComplete="email" type="email" maxLength={254} value={form.clientEmail} onChange={e=>setForm({...form,clientEmail:e.target.value})}/></label>
     <fieldset className="manual-service-picker"><legend className="manual-section-title">Serviços do atendimento</legend>
-      <div ref={picker} className="manual-service-field" onBlur={e=>{if(!e.currentTarget.contains(e.relatedTarget))setOpen(false);}} onKeyDown={e=>{if(e.key==='Escape')setOpen(false);}}>
+      <div ref={picker} className="manual-service-field" onBlur={e=>{if(e.relatedTarget&&!e.currentTarget.contains(e.relatedTarget))setOpen(false);}} onKeyDown={e=>{if(e.key==='Escape')setOpen(false);}}>
         <div className="manual-service-input"><Search size={18} aria-hidden="true"/><input type="search" role="combobox" aria-label="Buscar serviço ou categoria" aria-expanded={open} aria-controls="manual-service-options" aria-autocomplete="list" value={query} placeholder="Buscar e adicionar serviço" onFocus={()=>setOpen(true)} onChange={e=>{setQuery(e.target.value);setOpen(true);}} onKeyDown={e=>{if(e.key==='ArrowDown'){e.preventDefault();setOpen(true);requestAnimationFrame(()=>picker.current?.querySelector('[role=option]')?.focus());}if(e.key==='Enter'){e.preventDefault();}}}/></div>
         {open&&<div id="manual-service-options" className="manual-service-dropdown" role="listbox" aria-label="Serviços disponíveis" aria-multiselectable="true">{filtered.map(service=><button type="button" role="option" aria-selected={form.serviceIds.includes(service.id)} key={service.id} onClick={()=>{toggleService(service.id);setQuery('');setOpen(false);}}><span><strong>{service.name}</strong><small>{service.category}</small></span><span>{money(service.price)}{form.serviceIds.includes(service.id)?' ✓':''}</span></button>)}{!filtered.length&&<p role="status">Nenhum serviço encontrado.</p>}</div>}
       </div>
