@@ -1,0 +1,84 @@
+.manager-mobile-nav{display:none}
+
+@media(max-width:760px){
+  .manager-shell{min-height:100dvh}
+  .manager-shell .manager-main{min-width:0;width:100%;margin-left:0}
+  .manager-shell .manager-content,
+  .manager-shell .manager-content:has(.agenda-screen){padding:18px 12px calc(96px + env(safe-area-inset-bottom));width:100%;box-sizing:border-box}
+  .manager-shell .manager-topbar{position:sticky;top:0;z-index:35;height:60px;padding:0 12px;gap:8px}
+  .manager-shell .breadcrumbs{gap:8px;min-width:0}
+  .manager-shell .breadcrumbs>span,.manager-shell .breadcrumbs>svg,.manager-shell .manager-role-badge,.manager-shell .manager-account-info{display:none}
+  .manager-shell .breadcrumbs strong{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .manager-shell .topbar-account{gap:8px}
+  .manager-shell .notification-anchor{padding-left:0;border:0}
+  .manager-shell .notification-popover{position:fixed;top:66px;right:12px;width:min(320px,calc(100vw - 24px));box-sizing:border-box;max-height:65dvh;overflow:auto}
+  .manager-shell .manager-sidebar{width:min(300px,86vw);box-sizing:border-box;padding:16px 16px calc(24px + env(safe-area-inset-bottom));z-index:60;overscroll-behavior:contain}
+  .manager-shell .sidebar-scrim{z-index:59}
+  .manager-shell .sidebar-brand{min-height:60px;margin-bottom:12px;padding:0 8px 12px;display:flex;justify-content:space-between}
+  .manager-shell .sidebar-brand .brand-logo-image{width:74px;height:64px}
+  .manager-shell .sidebar-link{min-height:48px;padding:12px;font-size:14px}
+  .manager-shell .sidebar-logout{min-height:48px;margin-top:16px;padding:12px}
+  .manager-mobile-nav{position:fixed;bottom:0;left:0;right:0;z-index:45;display:flex;gap:4px;padding:6px 8px calc(6px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid #e1e5e9;box-shadow:0 -4px 20px #19212a08}
+  .manager-mobile-nav button{flex:1;min-width:0;min-height:54px;display:grid;align-content:center;justify-items:center;gap:4px;border:0;border-radius:10px;background:transparent;color:#687586;font:500 11px 'DM Sans',sans-serif}
+  .manager-mobile-nav button[aria-current=page],.manager-mobile-nav button[aria-expanded=true]{background:#f7f0e4;color:#916a30}
+  .manager-mobile-nav button:focus-visible{outline:2px solid #a17b40;outline-offset:-2px}
+  .manager-shell .mobile-agenda-create{display:none}
+  .manager-shell .dashboard-intro{margin:0 0 18px;gap:12px}
+  .manager-shell .dashboard-intro h1{font-size:24px;letter-spacing:-.6px;margin-bottom:8px}
+  .manager-shell .dashboard-intro p{line-height:1.6;font-size:13px}
+  .manager-shell .dashboard-intro .eyebrow{margin-bottom:8px}
+  .manager-shell .editor,.manager-shell .crud-list,.manager-shell .crud-editor{min-width:0;max-width:100%;box-sizing:border-box}
+  .manager-shell .editor{padding:18px 14px}
+  .manager-shell .workspace-body{min-width:0}
+  .manager-shell input:not([type=checkbox]):not([type=radio]):not([type=file]),.manager-shell select,.manager-shell textarea{font-size:16px;min-height:46px;min-width:0;max-width:100%;box-sizing:border-box}
+  .manager-shell .icon-button{min-width:44px;min-height:44px}
+  .manager-shell .gold-button,.manager-shell .outline-button,.manager-shell .primary-button{min-height:46px;white-space:normal;justify-content:center}
+  .manager-shell .form-grid,.manager-shell .service-edit-fields{grid-template-columns:minmax(0,1fr)}
+  .manager-shell .check-label{min-height:44px;gap:10px;line-height:1.5}
+  .manager-shell .check-label input{width:20px;height:20px;flex-shrink:0}
+  .manager-shell .crud-list-header{display:flex;flex-wrap:wrap;gap:12px;padding:16px}
+  .manager-shell .crud-list-header .gold-button{margin-left:auto}
+  .manager-shell .crud-search{flex:1 0 100%;width:100%;box-sizing:border-box}
+  .manager-shell .crud-search input{width:100%}
+  .manager-shell .crud-table-scroll{overflow:visible;padding:0 12px 12px}
+  .manager-shell .crud-table{display:block;min-width:0;width:100%;border:0}
+  .manager-shell .crud-table thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+  .manager-shell .crud-table tbody{display:grid;gap:12px}
+  .manager-shell .crud-table tbody tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;border:1px solid #e1e5e9;border-radius:12px;background:#fff;padding:16px}
+  .manager-shell .crud-table tbody td{display:block;min-width:0;padding:0;border:0;overflow-wrap:anywhere;white-space:normal;font-size:14px;text-align:left}
+  .manager-shell .crud-table tbody td::before{content:attr(data-label);display:block;margin-bottom:5px;font-size:11px;font-weight:500;color:#788391}
+  .manager-shell .crud-table tbody td:first-child,.manager-shell .crud-table tbody td:last-child{grid-column:1/-1}
+  .manager-shell .crud-table td strong{font-size:14px;line-height:1.5}
+  .manager-shell .crud-table td small{font-size:12px;line-height:1.6;overflow-wrap:anywhere}
+  .manager-shell .crud-row-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+  .manager-shell .crud-row-actions button{flex:1;min-height:44px;justify-content:center;padding:10px 8px;font-size:12px}
+  .manager-shell .crud-form-actions{display:flex;flex-wrap:wrap;gap:10px}
+  .manager-shell .crud-form-actions button{flex:1}
+  .manager-shell .hours-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:16px 0}
+  .manager-shell .hours-row>label:first-child{grid-column:1/-1}
+  .manager-shell .history-filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .manager-shell .history-search,.manager-shell .history-filters>label:last-of-type,.manager-shell .history-filters>button{grid-column:1/-1}
+  .manager-shell .history-protocol{overflow-wrap:anywhere;white-space:normal}
+  .manager-shell .booking-history .crud-table td:nth-child(3),.manager-shell .booking-history .crud-table td:nth-child(4){grid-column:1/-1}
+  .manager-shell .history-services{display:grid;gap:6px;min-width:0}
+  .manager-shell .history-services strong{white-space:normal;overflow-wrap:anywhere}
+  .manager-shell .agenda-selector label{min-width:0;gap:10px}
+  .manager-shell .agenda-screen .date-navigation{grid-template-columns:44px 44px minmax(0,1fr) auto;gap:0}
+  .manager-shell .agenda-screen .calendar-toolbar{padding:10px}
+  .manager-shell .agenda-screen .today-button{min-height:44px}
+  .manager-shell .agenda-screen .view-switch button{min-height:44px}
+  .manager-shell .calendar-filterbar{flex-wrap:wrap}
+  .manager-shell .calendar-filterbar>div{flex:1;justify-content:flex-end;min-width:0}
+  .manager-shell .calendar-filterbar select{width:100%;max-width:220px;font-size:14px}
+  .manager-shell .mobile-agenda-week button{min-height:54px}
+  .manager-shell .timeline-dialog{width:100%;max-width:100%;max-height:calc(100dvh - 32px);box-sizing:border-box;overflow:auto;padding-bottom:24px}
+  .manager-shell .booking-actions{display:flex;flex-wrap:wrap;gap:8px}
+  .manager-shell .booking-actions>*{min-height:44px;flex:1;padding:10px;text-align:center}
+  .manager-shell .google-actions{display:grid;gap:10px}
+}
+
+@media(max-width:360px){
+  .manager-shell .crud-table tbody tr{grid-template-columns:minmax(0,1fr)}
+  .manager-shell .agenda-screen .date-navigation{grid-template-columns:40px 40px minmax(0,1fr)}
+  .manager-shell .date-navigation .today-button{grid-column:1/-1}
+}

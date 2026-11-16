@@ -209,6 +209,27 @@ app.patch('/api/admin/professionals/:id/active', requireAdmin, async(req,res)=>{
     return professional;
   }));
 });
+app.delete('/api/admin/professionals/:id', requireAdmin, async(req,res)=>{
+  const id=Number(req.params.id);
+  if(!Number.isInteger(id)||id<1)fail('Profissional inválido.');
+  await locked(async tx=>{
+    const professional=await tx.professional.findUnique({where:{id},include:{user:{select:{role:true}}}});
+    if(!professional)fail('Profissional não encontrado.',404);
+    if(professional.userId===req.user.id)fail('Você não pode excluir a própria conta.');
+    if(professional.user?.role==='ROOT'&&!isRoot(req.user))fail('Somente root pode gerenciar contas root.',403);
+    if(await tx.booking.count({where:{professionalId:id}}))fail('Este profissional possui agendamentos no histórico. Desative-o para preservar os registros.',409);
+    if(await tx.googleCalendarSync.count({where:{connection:{professionalId:id}}}))fail('Este profissional possui eventos vinculados ao Google Agenda. Desative-o para preservar os registros.',409);
+    await tx.googleCalendarOAuthState.deleteMany({where:{professionalId:id}});
+    await tx.googleCalendarConnection.deleteMany({where:{professionalId:id}});
+    await tx.block.deleteMany({where:{professionalId:id}});
+    await tx.professional.delete({where:{id}});
+    if(professional.userId){
+      await tx.session.deleteMany({where:{userId:professional.userId}});
+      await tx.user.update({where:{id:professional.userId},data:{active:false}});
+    }
+  });
+  res.json({ok:true});
+});
 app.post('/api/admin/professionals', requireAdmin, async (req,res) => {
   const { id,hours,serviceIds,allServices,password } = req.body;
   const email = cleanText(req.body.email,254).toLowerCase(), name = cleanText(req.body.name,120);

@@ -14,6 +14,14 @@ const icons={'Meu perfil':UserRound,Agenda:CalendarDays,Histórico:History,Servi
 
 export function DashboardShell({user,tab,setTab,workspace,bookings,onLogout,children}) {
   const [menu,setMenu]=useState(false),[alerts,setAlerts]=useState(false);
+  useEffect(()=>{
+    if(!menu)return;
+    const previous=document.body.style.overflow;
+    document.body.style.overflow='hidden';
+    const close=event=>{if(event.key==='Escape')setMenu(false);};
+    document.addEventListener('keydown',close);
+    return()=>{document.body.style.overflow=previous;document.removeEventListener('keydown',close);};
+  },[menu]);
   const admin=['ROOT','ADMIN','MANAGER'].includes(user.role);
   const root=['ROOT','ADMIN'].includes(user.role);
   const tabs=admin?['Agenda','Histórico','Serviços','Categorias','Clientes',...(root?['Pagamentos','WhatsApp']:[]),'Funcionamento','Equipe','Bloqueios','Meu perfil']:['Agenda','Meu perfil'];
@@ -24,6 +32,12 @@ export function DashboardShell({user,tab,setTab,workspace,bookings,onLogout,chil
   return <div className="manager-shell">{menu&&<button className="sidebar-scrim" aria-label="Fechar menu" onClick={()=>setMenu(false)}/>}
     <aside className={`manager-sidebar ${menu?'is-open':''}`}><div className="sidebar-brand"><Brand/><button className="icon-button mobile-close" onClick={()=>setMenu(false)} aria-label="Fechar menu"><X size={20}/></button></div><p className="nav-caption">GERENCIAMENTO</p><nav aria-label="Menu principal">{tabs.map(t=>{const Icon=icons[t];return <button key={t} className={`sidebar-link ${tab===t?'is-active':''}`} aria-current={tab===t?'page':undefined} onClick={()=>navigate(t)}><Icon size={21}/><span>{t==='Funcionamento'?'Configurações':t==='Bloqueios'?'Bloqueios de agenda':t}</span>{t==='WhatsApp'&&<i className="gold-dot"/>}</button>;})}<a className="sidebar-link" href="/"><ExternalLink size={21}/><span>Ver catálogo</span></a></nav><button className="sidebar-logout" onClick={onLogout}><LogOut size={17}/>Sair da conta</button></aside>
     <div className="manager-main"><header className="manager-topbar"><div className="breadcrumbs"><button className="icon-button mobile-menu" onClick={()=>setMenu(true)} aria-label="Abrir menu"><Menu size={22}/></button><span>Gerenciador</span><ChevronRight size={16}/><strong>{tab==='Funcionamento'?'Configurações':tab==='Bloqueios'?'Bloqueios de agenda':tab}</strong></div><div className="topbar-account"><span className="manager-role-badge">{root?'Root':admin?'Manager':'Funcionário'}</span><div className="notification-anchor"><button className="icon-button notification-bell" aria-label="Ver resumo de reservas" aria-expanded={alerts} onClick={()=>setAlerts(!alerts)}><Bell size={22}/>{(pending>0||nextConfirmed.length>0)&&<i className="gold-dot"/>}</button>{alerts&&<div className="notification-popover"><strong>Seus agendamentos</strong><p>{nextConfirmed.length} confirmado(s) a partir de hoje.</p><p>{pending} reserva(s) aguardando sinal.</p>{nextConfirmed.slice(0,3).map(b=><a className="notification-booking-link" key={b.id} href={`/admin?data=${b.booking_date}&profissional=${b.professional_id}`}><strong>Reserva #{b.id} · {b.professional_name}</strong><span>{b.booking_date.split('-').reverse().join('/')} · {b.start}–{b.end}</span></a>)}<small>Clique no atendimento para abrir a data e o profissional corretos.</small></div>}</div><div className="manager-account-info"><strong>{user.name}</strong><small>{user.email}</small></div><span className="account-avatar" title={`${user.name} · ${user.email}`}>{user.name.split(' ').map(n=>n[0]).slice(0,2).join('')}</span></div></header><main className="manager-content">{children}</main></div>
+    <nav className="manager-mobile-nav" aria-label="Atalhos do gerenciador">
+      <button type="button" aria-current={tab==='Agenda'?'page':undefined} onClick={()=>navigate('Agenda')}><CalendarDays size={21}/><span>Agenda</span></button>
+      {admin&&<button type="button" aria-current={tab==='Novo agendamento'?'page':undefined} onClick={()=>navigate('Novo agendamento')}><Plus size={22}/><span>Agendar</span></button>}
+      <button type="button" aria-current={tab===(admin?'Equipe':'Meu perfil')?'page':undefined} onClick={()=>navigate(admin?'Equipe':'Meu perfil')}><UserRound size={21}/><span>{admin?'Equipe':'Perfil'}</span></button>
+      <button type="button" aria-expanded={menu} onClick={()=>{setAlerts(false);setMenu(!menu);}}><Menu size={21}/><span>Mais</span></button>
+    </nav>
   </div>;
 }
 

@@ -22,6 +22,7 @@ import BookingSchedule from './booking-schedule';
 import ReservationPayment,{openCheckoutTab,launchCheckout,reservationKey,announcePaymentUpdate} from './reservation-payment';
 import './styles.css';
 import './design.css';
+import './manager-mobile.css';
 
 function App() {
   const [catalog,setCatalog]=useState(null),[error,setError]=useState(''),[step,setStep]=useState(1),[serviceIds,setServiceIds]=useState([]),[professionalId,setProfessionalId]=useState(''),[date,setDate]=useState(''),[scheduleStage,setScheduleStage]=useState('professional'),[slots,setSlots]=useState([]),[slot,setSlot]=useState(null),[busy,setBusy]=useState(false),[refresh,setRefresh]=useState(0),[user,setUser]=useState(null),[client,setClient]=useState({name:'',whatsapp:'',email:'',consent:false,termsAccepted:false}),[booking,setBooking]=useState(null),[paymentConfigured,setPaymentConfigured]=useState(false),[checkoutUrl,setCheckoutUrl]=useState('');
