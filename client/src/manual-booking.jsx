@@ -1,7 +1,7 @@
 import {formatWhatsApp} from './phone';
 import BookingCalendar from './booking-calendar';
 import React,{useEffect,useState} from 'react';
-import {Search,X} from 'lucide-react';
+import {Search,X,Plus,ChevronDown} from 'lucide-react';
 import {api,money,dateLabel} from './api';
 
 const normalized=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
@@ -43,11 +43,11 @@ export default function ManualBooking({workspace,save,onCancel}){
     <label>E-mail da cliente (opcional)<input placeholder="cliente@email.com" autoComplete="email" type="email" maxLength={254} value={form.clientEmail} onChange={e=>setForm({...form,clientEmail:e.target.value})}/></label>
     <fieldset className="manual-service-picker"><legend className="manual-section-title">Serviços do atendimento</legend>
       <div className="manual-service-field">
-        <div className="manual-service-input"><Search size={18} aria-hidden="true"/><input type="search" aria-label="Buscar serviço ou categoria" value={query} placeholder="Buscar serviço ou categoria" onChange={e=>setQuery(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')e.preventDefault();}}/></div>
-        <label className="manual-service-select">Adicionar serviço<select aria-label="Adicionar serviço" value="" onChange={e=>{const id=Number(e.target.value);if(!id)return;toggleService(id);setQuery('');}}>
+        <label className="manual-service-add"><Plus size={18} aria-hidden="true"/><span>{selected.length?'Adicionar outro serviço':'Escolher serviço'}</span><ChevronDown size={17} aria-hidden="true"/><select aria-label="Adicionar serviço" value="" onChange={e=>{const id=Number(e.target.value);if(!id)return;toggleService(id);setQuery('');}}>
           <option value="">Selecione um serviço</option>
           {filtered.filter(service=>!form.serviceIds.includes(service.id)).map(service=><option key={service.id} value={service.id}>{service.name} · {service.category} · {money(service.price)}</option>)}
         </select></label>
+        <details className="manual-service-filter"><summary><Search size={14} aria-hidden="true"/>Buscar por nome ou categoria</summary><div className="manual-service-input"><Search size={18} aria-hidden="true"/><input type="search" aria-label="Buscar serviço ou categoria" value={query} placeholder="Nome do serviço ou categoria" onChange={e=>setQuery(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')e.preventDefault();}}/></div>{query&&<small>Abra “Escolher serviço” para ver os resultados.</small>}</details>
         {!filtered.length&&<p role="status">Nenhum serviço encontrado.</p>}
       </div>
       {!!selected.length&&<div className="manual-service-tags" aria-label="Serviços selecionados">{form.serviceIds.map(id=>services.find(service=>service.id===id)).filter(Boolean).map(service=><button type="button" key={service.id} onClick={()=>toggleService(service.id)} aria-label={`Remover ${service.name}`}><span>{service.name}</span><X size={14}/></button>)}</div>}
